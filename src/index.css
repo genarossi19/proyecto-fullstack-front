@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+@theme inline {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --radius: 0.5rem;
+
+  /* shadcn/ui color tokens */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+  --color-primary: hsl(142 76% 36%);
+  --color-primary-foreground: hsl(355 100% 97%);
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222.2 84% 4.9%);
+  --color-muted: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
+  --color-accent: hsl(210 40% 96%);
+  --color-accent-foreground: hsl(222.2 84% 4.9%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-border: hsl(214.3 31.8% 91.4%);
+  --color-input: hsl(214.3 31.8% 91.4%);
+  --color-ring: hsl(142 76% 36%);
+
+  /* Sidebar colors */
+  --color-sidebar-background: hsl(0 0% 98%);
+  --color-sidebar-foreground: hsl(240 5.3% 26.1%);
+  --color-sidebar-primary: hsl(240 5.9% 10%);
+  --color-sidebar-primary-foreground: hsl(0 0% 98%);
+  --color-sidebar-accent: hsl(240 4.8% 95.9%);
+  --color-sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --color-sidebar-border: hsl(220 13% 91%);
+  --color-sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* Chart colors */
+  --color-chart-1: hsl(12 76% 61%);
+  --color-chart-2: hsl(173 58% 39%);
+  --color-chart-3: hsl(197 37% 24%);
+  --color-chart-4: hsl(43 74% 66%);
+  --color-chart-5: hsl(27 87% 67%);
+
+  /* Custom gradient colors */
+  --color-green-gradient-from: hsl(134 61% 41%);
+  --color-green-gradient-to: hsl(134 61% 31%);
+}
+
+.dark {
+  --color-background: hsl(0 0% 3.9%);
+  --color-foreground: hsl(0 0% 98%);
+  --color-card: hsl(0 0% 3.9%);
+  --color-card-foreground: hsl(0 0% 98%);
+  --color-popover: hsl(0 0% 3.9%);
+  --color-popover-foreground: hsl(0 0% 98%);
+  --color-primary: hsl(0 0% 98%);
+  --color-primary-foreground: hsl(0 0% 9%);
+  --color-secondary: hsl(0 0% 14.9%);
+  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-muted: hsl(0 0% 14.9%);
+  --color-muted-foreground: hsl(0 0% 63.9%);
+  --color-accent: hsl(0 0% 14.9%);
+  --color-accent-foreground: hsl(0 0% 98%);
+  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(0 0% 14.9%);
+  --color-input: hsl(0 0% 14.9%);
+  --color-ring: hsl(0 0% 83.1%);
+  --color-chart-1: hsl(220 70% 50%);
+  --color-chart-2: hsl(160 60% 45%);
+  --color-chart-3: hsl(30 80% 55%);
+  --color-chart-4: hsl(280 65% 60%);
+  --color-chart-5: hsl(340 75% 55%);
+  --color-sidebar-background: hsl(240 5.9% 10%);
+  --color-sidebar-foreground: hsl(240 4.8% 95.9%);
+  --color-sidebar-primary: hsl(224.3 76.3% 48%);
+  --color-sidebar-primary-foreground: hsl(0 0% 100%);
+  --color-sidebar-accent: hsl(240 3.7% 15.9%);
+  --color-sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --color-sidebar-border: hsl(240 3.7% 15.9%);
+  --color-sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --color-green-gradient-from: hsl(134 61% 41%);
+  --color-green-gradient-to: hsl(134 61% 31%);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.bg-green-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-green-gradient-from),
+    var(--color-green-gradient-to)
+  );
+}
+
+.bg-green-gradient-subtle {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-green-gradient-from) 10%, transparent),
+    color-mix(in srgb, var(--color-green-gradient-to) 5%, transparent)
+  );
+}

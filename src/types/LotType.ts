@@ -1,9 +1,9 @@
-export default interface FieldType {
+export default interface LotType {
   id: number;
   name: string;
   area: number;
   lat: number;
   long: number;
   active: boolean;
-  clientId: number;
+  fieldId: number;
 }

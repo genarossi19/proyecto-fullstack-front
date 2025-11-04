@@ -1,7 +1,9 @@
-import type Field from "./FieldType";
-
 export interface ClientType {
   id: number;
   name: string;
-  field: Field[];
+  CUIT: number;
+  active: boolean;
+  email: string;
+  phone: string;
+  address: string;
 }

@@ -1,33 +1,18 @@
 import type React from "react";
 
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Save,
-  FileText,
-  Calendar,
-  ClipboardList,
-  MapPin,
-  UserPlus,
-  Tag,
-} from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
 import { CreateClientModal } from "../components/CreateClientModal";
 import { CreateFieldModal } from "../components/CreateFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
-import { Separator } from "@radix-ui/react-select";
 import { useNavigate } from "react-router";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -35,46 +20,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
-import { toast } from "sonner";
+interface EditWorkOrderProps {
+  workOrderId: number;
+}
 
-export function CreateWorkOrder() {
+export function EditWorkOrder({ workOrderId }: EditWorkOrderProps) {
+  const navigate = useNavigate();
+  // Mock initial data - replace with actual data fetching
   const [formData, setFormData] = useState({
-    id_cliente: "",
-    id_campo: "",
-    id_presupuesto: "",
-    id_servicio: "",
-    fecha_emision: new Date().toISOString().split("T")[0],
-    fecha_inicio: "",
-    fecha_fin: "",
+    id_cliente: "1",
+    id_campo: "1",
+    id_presupuesto: "1",
+    id_servicio: "1",
+    fecha_emision: "2024-01-10",
+    fecha_inicio: "2024-01-12",
+    fecha_fin: "2024-01-15",
     campaña: "2024/25",
-    estado: "Pendiente",
-    observaciones: "",
+    estado: "En Progreso",
+    observaciones: "Cosecha de maíz en lote principal",
   });
 
   const [detalleLotes, setDetalleLotes] = useState([
     {
-      id_lote: "",
-      id_estadio: "",
-      id_cultivo: "",
-      superficie_ha: "",
-      latitud: "",
-      longitud: "",
+      id_lote: "1",
+      id_estadio: "1",
+      id_cultivo: "1",
+      superficie_ha: "45.5",
+      latitud: "-34.5678",
+      longitud: "-58.1234",
     },
   ]);
 
   const [detalleMaquinaria, setDetalleMaquinaria] = useState([
     {
-      id_maquinaria: "",
-      id_empleado: "",
-      observaciones: "",
+      id_maquinaria: "1",
+      id_empleado: "1",
+      observaciones: "Turno mañana",
     },
   ]);
 
   const [detalleProducto, setDetalleProducto] = useState([
     {
-      id_producto: "",
-      dosis: "",
+      id_producto: "1",
+      dosis: "2.5",
     },
   ]);
 
@@ -101,6 +92,31 @@ export function CreateWorkOrder() {
     { id_lote: 1, nombre: "Lote A1", id_campo: 1 },
     { id_lote: 2, nombre: "Lote A2", id_campo: 1 },
     { id_lote: 3, nombre: "Lote B1", id_campo: 2 },
+  ]);
+
+  // Mock budgets data - filtered by client
+  const [budgets] = useState([
+    {
+      id_presupuesto: 1,
+      numero: "PRES-001",
+      servicio: "Cosecha de Maíz",
+      id_cliente: 1,
+      estado: "Aprobado",
+    },
+    {
+      id_presupuesto: 2,
+      numero: "PRES-002",
+      servicio: "Fumigación de Soja",
+      id_cliente: 2,
+      estado: "Aprobado",
+    },
+    {
+      id_presupuesto: 3,
+      numero: "PRES-003",
+      servicio: "Siembra de Trigo",
+      id_cliente: 1,
+      estado: "Pendiente",
+    },
   ]);
 
   const servicios = [
@@ -139,30 +155,6 @@ export function CreateWorkOrder() {
     { id_estadio: 3, nombre: "R3" },
   ];
 
-  const [budgets] = useState([
-    {
-      id_presupuesto: 1,
-      numero: "PRES-001",
-      servicio: "Cosecha de Maíz",
-      id_cliente: 1,
-      estado: "Aprobado",
-    },
-    {
-      id_presupuesto: 2,
-      numero: "PRES-002",
-      servicio: "Fumigación de Soja",
-      id_cliente: 2,
-      estado: "Aprobado",
-    },
-    {
-      id_presupuesto: 3,
-      numero: "PRES-003",
-      servicio: "Siembra de Trigo",
-      id_cliente: 1,
-      estado: "Pendiente",
-    },
-  ]);
-
   const filteredCampos = campos.filter(
     (campo) =>
       !formData.id_cliente ||
@@ -179,6 +171,10 @@ export function CreateWorkOrder() {
       !formData.id_cliente ||
       budget.id_cliente.toString() === formData.id_cliente
   );
+
+  const onBack = () => {
+    navigate(-1);
+  };
 
   const handleClientCreated = (newClient: any) => {
     const clientWithId = { ...newClient, id_cliente: clientes.length + 1 };
@@ -267,15 +263,13 @@ export function CreateWorkOrder() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Orden de trabajo:", {
+    console.log("[v0] Updating work order:", workOrderId, {
       ...formData,
       detalleLotes,
       detalleMaquinaria,
       detalleProducto,
     });
-    // Here you would send the data to your backend
-    navigate("/work-orders");
-    toast.success("Orden de trabajo creada exitosamente.");
+    onBack();
   };
 
   const selectedClient = clientes.find(
@@ -285,278 +279,260 @@ export function CreateWorkOrder() {
     (c) => c.id_campo.toString() === formData.id_campo
   );
 
-  const navigate = useNavigate();
-
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
+        <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver
         </Button>
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            Nueva Orden de Trabajo
+            Editar Orden OT-{workOrderId.toString().padStart(3, "0")}
           </h1>
           <p className="text-gray-600 mt-1">
-            Completa todos los campos para crear una nueva orden de trabajo.
+            Modifica los campos necesarios para actualizar la orden de trabajo.
           </p>
         </div>
       </div>
 
       <form id="work-order-form" onSubmit={handleSubmit} className="space-y-6">
+        {/* General Information */}
         <Card>
-          <CardHeader className="border-b px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold text-gray-900">
-                  Información General
-                </CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  Configuración principal de la orden de trabajo
-                </p>
-              </div>
-              <div className="text-xs text-gray-400">
-                <span className="text-red-500">*</span> Obligatorio
-              </div>
-            </div>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Información General
+            </CardTitle>
           </CardHeader>
-
-          <CardContent className="p-6">
-            <div className="space-y-8">
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 lg:col-span-6">
-                  <Label htmlFor="cliente" className="mb-2">
-                    Cliente <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={
-                      formData.id_cliente ? String(formData.id_cliente) : ""
-                    }
-                    onValueChange={(v) => {
-                      if (v === "new") {
-                        setIsCreateClientModalOpen(true);
-                      } else {
-                        setFormData({
-                          ...formData,
-                          id_cliente: Number(v),
-                          id_campo: "",
-                        });
-                      }
-                    }}
-                    required
-                  >
-                    <SelectTrigger id="cliente" className="w-full">
-                      <SelectValue placeholder="Seleccionar cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes.map((c) => (
-                        <SelectItem
-                          key={c.id_cliente}
-                          value={String(c.id_cliente)}
-                        >
-                          {c.razon_social}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="new" className="text-green-600">
-                        + Agregar Nuevo Cliente
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="campo" className="mb-2">
-                    Campo <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.id_campo ? String(formData.id_campo) : ""}
-                    onValueChange={(v) => {
-                      if (v === "new") {
-                        if (!formData.id_cliente) {
-                          alert("Primero selecciona un cliente");
-                          return;
-                        }
-                        setIsCreateFieldModalOpen(true);
-                      } else {
-                        setFormData({ ...formData, id_campo: Number(v) });
-                      }
-                    }}
-                    disabled={!formData.id_cliente}
-                    required
-                  >
-                    <SelectTrigger id="campo" className="w-full">
-                      <SelectValue placeholder="Seleccionar campo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredCampos.map((f) => (
-                        <SelectItem key={f.id_campo} value={String(f.id_campo)}>
-                          {f.nombre}
-                        </SelectItem>
-                      ))}
-                      {formData.id_cliente && (
-                        <SelectItem value="new" className="text-green-600">
-                          + Agregar Nuevo Campo
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {!formData.id_cliente && (
-                    <p className="mt-1.5 text-xs text-gray-400">
-                      Requiere seleccionar cliente
-                    </p>
-                  )}
-                </div>
-
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="servicio" className="mb-2">
-                    Servicio <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={
-                      formData.id_servicio ? String(formData.id_servicio) : ""
-                    }
-                    onValueChange={(v) =>
-                      setFormData({ ...formData, id_servicio: Number(v) })
-                    }
-                    required
-                  >
-                    <SelectTrigger id="servicio" className="w-full">
-                      <SelectValue placeholder="Seleccionar servicio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {servicios.map((s) => (
-                        <SelectItem
-                          key={s.id_servicio}
-                          value={String(s.id_servicio)}
-                        >
-                          {s.nombre_servicio}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200"></div>
-
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="fecha_emision" className="mb-2">
-                    Fecha Emisión <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="fecha_emision"
-                    type="date"
-                    value={formData.fecha_emision}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        fecha_emision: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="fecha_inicio" className="mb-2">
-                    Fecha Inicio <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="fecha_inicio"
-                    type="date"
-                    value={formData.fecha_inicio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fecha_inicio: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="fecha_fin" className="mb-2">
-                    Fecha Fin
-                  </Label>
-                  <Input
-                    id="fecha_fin"
-                    type="date"
-                    value={formData.fecha_fin || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fecha_fin: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="campana" className="mb-2">
-                    Campaña <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="campana"
-                    type="text"
-                    value={formData.campaña}
-                    onChange={(e) =>
-                      setFormData({ ...formData, campaña: e.target.value })
-                    }
-                    required
-                    placeholder="Ej: 2024/25"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200"></div>
-
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 lg:col-span-3">
-                  <Label htmlFor="estado" className="mb-2">
-                    Estado <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.estado}
-                    onValueChange={(v) =>
-                      setFormData({ ...formData, estado: v })
-                    }
-                    required
-                  >
-                    <SelectTrigger id="estado" className="w-full">
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                      <SelectItem value="En Progreso">En Progreso</SelectItem>
-                      <SelectItem value="Completado">Completado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200"></div>
-
-              <div>
-                <Label htmlFor="observaciones" className="mb-2">
-                  Observaciones
-                </Label>
-                <Textarea
-                  id="observaciones"
-                  value={formData.observaciones || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, observaciones: e.target.value })
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Cliente */}
+            <div className="w-full">
+              <Label htmlFor="cliente">Cliente *</Label>
+              <Select
+                value={formData.id_cliente?.toString() || ""}
+                onValueChange={(value) => {
+                  if (value === "new") {
+                    setIsCreateClientModalOpen(true);
+                  } else {
+                    setFormData({
+                      ...formData,
+                      id_cliente: value,
+                      id_campo: "",
+                      id_presupuesto: "",
+                    });
                   }
-                  rows={4}
-                  className="resize-none"
-                  placeholder="Notas, instrucciones o comentarios adicionales sobre la orden de trabajo..."
-                />
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-gray-400">
-                    Información adicional para el equipo operativo
-                  </p>
-                  <span className="text-xs text-gray-400 font-mono">
-                    {formData.observaciones?.length || 0}
-                  </span>
-                </div>
-              </div>
+                }}
+              >
+                <SelectTrigger id="cliente" className="w-full">
+                  <SelectValue placeholder="Seleccionar cliente" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {clientes.map((cliente) => (
+                    <SelectItem
+                      key={cliente.id_cliente}
+                      value={cliente.id_cliente.toString()}
+                    >
+                      {cliente.razon_social}
+                    </SelectItem>
+                  ))}
+                  <SelectItem
+                    value="new"
+                    className="text-green-600 font-medium"
+                  >
+                    + Agregar Nuevo Cliente
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Campo */}
+            <div className="w-full">
+              <Label htmlFor="campo">Campo *</Label>
+              <Select
+                value={formData.id_campo?.toString() || ""}
+                onValueChange={(value) => {
+                  if (value === "new") {
+                    if (!formData.id_cliente) {
+                      alert("Primero selecciona un cliente");
+                      return;
+                    }
+                    setIsCreateFieldModalOpen(true);
+                  } else {
+                    setFormData({ ...formData, id_campo: value });
+                  }
+                }}
+                disabled={!formData.id_cliente}
+              >
+                <SelectTrigger id="campo" className="w-full">
+                  <SelectValue placeholder="Seleccionar campo" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {filteredCampos.map((campo) => (
+                    <SelectItem
+                      key={campo.id_campo}
+                      value={campo.id_campo.toString()}
+                    >
+                      {campo.nombre}
+                    </SelectItem>
+                  ))}
+                  {formData.id_cliente && (
+                    <SelectItem
+                      value="new"
+                      className="text-green-600 font-medium"
+                    >
+                      + Agregar Nuevo Campo
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Presupuesto */}
+            <div className="w-full">
+              <Label htmlFor="presupuesto">
+                Presupuesto Relacionado (Opcional)
+              </Label>
+              <Select
+                value={formData.id_presupuesto?.toString() || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, id_presupuesto: value })
+                }
+                disabled={!formData.id_cliente}
+              >
+                <SelectTrigger id="presupuesto" className="w-full">
+                  <SelectValue placeholder="Sin presupuesto" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {filteredBudgets.map((budget) => (
+                    <SelectItem
+                      key={budget.id_presupuesto}
+                      value={budget.id_presupuesto.toString()}
+                    >
+                      {budget.numero} - {budget.servicio} ({budget.estado})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Servicio */}
+            <div className="w-full">
+              <Label htmlFor="servicio">Servicio *</Label>
+              <Select
+                value={formData.id_servicio?.toString() || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, id_servicio: value })
+                }
+              >
+                <SelectTrigger id="servicio" className="w-full">
+                  <SelectValue placeholder="Seleccionar servicio" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  {servicios.map((servicio) => (
+                    <SelectItem
+                      key={servicio.id_servicio}
+                      value={servicio.id_servicio.toString()}
+                    >
+                      {servicio.nombre_servicio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fecha Emisión */}
+            <div>
+              <Label htmlFor="fecha_emision">Fecha Emisión *</Label>
+              <Input
+                id="fecha_emision"
+                type="date"
+                value={formData.fecha_emision}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_emision: e.target.value })
+                }
+                required
+                className="w-full"
+              />
+            </div>
+
+            {/* Fecha Inicio */}
+            <div>
+              <Label htmlFor="fecha_inicio">Fecha Inicio *</Label>
+              <Input
+                id="fecha_inicio"
+                type="date"
+                value={formData.fecha_inicio}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_inicio: e.target.value })
+                }
+                required
+                className="w-full"
+              />
+            </div>
+
+            {/* Fecha Fin */}
+            <div>
+              <Label htmlFor="fecha_fin">Fecha Fin</Label>
+              <Input
+                id="fecha_fin"
+                type="date"
+                value={formData.fecha_fin}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_fin: e.target.value })
+                }
+                className="w-full"
+              />
+            </div>
+
+            {/* Campaña */}
+            <div>
+              <Label htmlFor="campaña">Campaña *</Label>
+              <Input
+                id="campaña"
+                type="text"
+                value={formData.campaña}
+                onChange={(e) =>
+                  setFormData({ ...formData, campaña: e.target.value })
+                }
+                required
+                className="w-full"
+              />
+            </div>
+
+            {/* Estado */}
+            <div>
+              <Label htmlFor="estado">Estado *</Label>
+              <Select
+                value={formData.estado || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, estado: value })
+                }
+              >
+                <SelectTrigger id="estado" className="w-full">
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent className="w-full">
+                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                  <SelectItem value="En Progreso">En Progreso</SelectItem>
+                  <SelectItem value="Completado">Completado</SelectItem>
+                  <SelectItem value="Cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Observaciones */}
+            <div className="md:col-span-2 lg:col-span-3">
+              <Label htmlFor="observaciones">Observaciones</Label>
+              <Textarea
+                id="observaciones"
+                value={formData.observaciones}
+                onChange={(e) =>
+                  setFormData({ ...formData, observaciones: e.target.value })
+                }
+                rows={3}
+                placeholder="Observaciones adicionales..."
+                className="w-full"
+              />
             </div>
           </CardContent>
         </Card>
@@ -784,7 +760,7 @@ export function CreateWorkOrder() {
           </CardContent>
         </Card>
 
-        {/* DETALLE DE MAQUINARIA */}
+        {/* Detalle de Maquinaria */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900">
@@ -918,7 +894,91 @@ export function CreateWorkOrder() {
           </CardContent>
         </Card>
 
-        {/* DETALLE DE PRODUCTOS */}
+        {/* Detalle de Productos */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-gray-900">
+              Productos Aplicados
+            </CardTitle>
+            <Button
+              type="button"
+              variant={"outline"}
+              onClick={addDetalleProducto}
+              size="sm"
+              className="text-green-600 hover:text-green-600/90 !border-green-600/30"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Producto
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {detalleProducto.map((producto, index) => (
+              <div
+                key={index}
+                className="border border-gray-200 rounded-lg p-4 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900">
+                    Producto {index + 1}
+                  </h4>
+                  {detalleProducto.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDetalleProducto(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Producto *
+                    </label>
+                    <select
+                      value={producto.id_producto}
+                      onChange={(e) => {
+                        const newDetalleProducto = [...detalleProducto];
+                        newDetalleProducto[index].id_producto = e.target.value;
+                        setDetalleProducto(newDetalleProducto);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    >
+                      <option value="">Seleccionar producto</option>
+                      {productos.map((prod) => (
+                        <option key={prod.id_producto} value={prod.id_producto}>
+                          {prod.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dosis (L/ha o kg/ha) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={producto.dosis}
+                      onChange={(e) => {
+                        const newDetalleProducto = [...detalleProducto];
+                        newDetalleProducto[index].dosis = e.target.value;
+                        setDetalleProducto(newDetalleProducto);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
         <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 shadow-sm">
           <CardContent className="p-6">
@@ -941,10 +1001,11 @@ export function CreateWorkOrder() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    ¿Listo para crear la orden?
+                    ¿Listo para guardar la orden editada?
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    Revisa que todos los datos sean correctos antes de continuar
+                    Revisa que todos los cambios sean correctos antes de
+                    continuar
                   </p>
                 </div>
               </div>
@@ -955,7 +1016,7 @@ export function CreateWorkOrder() {
                 className="hover:cursor-pointer w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-6 text-base font-semibold"
               >
                 <Save className="w-5 h-5 mr-2" />
-                Guardar Orden
+                Guardar Cambios
               </Button>
             </div>
           </CardContent>

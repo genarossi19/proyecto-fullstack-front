@@ -1,16 +1,24 @@
-import { Plus, Search, Filter, Truck, Wrench, Calendar } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../components/ui/tooltip";
+"use client";
+
 import { useState } from "react";
-import { CreateMachineryModal } from "../components/CreateMachineryModal";
-import { TableActions } from "../components/ui/table-actions";
-import { ViewToggle } from "../components/ui/view-toggle";
+import { useNavigate } from "react-router";
+import { Card, CardHeader, CardContent } from ".././components/ui/card";
+import { Button } from ".././components/ui/button";
+import { Badge } from "../components/ui/badge";
+// Progress not used on this page
+import {
+  Search,
+  Plus,
+  Filter,
+  Wrench,
+  CheckCircle,
+  AlertCircle,
+  Plane as Airplane,
+  Truck,
+} from "lucide-react";
+import { ViewToggle } from ".././components/ui/view-toggle";
+import CardStats from "../components/CardStats";
+import { TableActions } from ".././components/ui/table-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,423 +28,337 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog";
+} from ".././components/ui/alert-dialog";
+import { CreateMachineryModal } from ".././components/CreateMachineryModal";
 
-export function Machinery() {
+export default function Machinery() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [deleteMachineryId, setDeleteMachineryId] = useState<string | null>(
+  const [deleteMachineryId, setDeleteMachineryId] = useState<number | null>(
     null
   );
+  const navigate = useNavigate();
 
-  const machinery = [
+  const maquinarias = [
     {
-      id: "MAC-001",
-      name: "Tractor John Deere 6120M",
-      type: "Tractor",
-      status: "Disponible",
-      location: "Galpón A",
-      lastMaintenance: "2024-01-05",
-      nextMaintenance: "2024-02-05",
-      hoursWorked: 1250,
+      id: 1,
+      patente: "ABC-123",
+      nombre: "Tractor John Deere 6120",
+      tipo: "suelo",
+      marcaModelo: "John Deere / 6120M",
+      estado: "en uso",
+      ultimoMantenimiento: "2024-09-15",
     },
     {
-      id: "MAC-002",
-      name: "Cosechadora Case IH 8240",
-      type: "Cosechadora",
-      status: "En Uso",
-      location: "Lote B",
-      lastMaintenance: "2023-12-20",
-      nextMaintenance: "2024-01-20",
-      hoursWorked: 890,
+      id: 2,
+      patente: "XYZ-789",
+      nombre: "Cosechadora Case IH 8230",
+      tipo: "suelo",
+      marcaModelo: "Case IH / 8230",
+      estado: "mantenimiento",
+      ultimoMantenimiento: "2024-10-02",
     },
     {
-      id: "MAC-003",
-      name: "Pulverizadora Apache 1020",
-      type: "Pulverizadora",
-      status: "Mantenimiento",
-      location: "Taller",
-      lastMaintenance: "2024-01-10",
-      nextMaintenance: "2024-02-10",
-      hoursWorked: 650,
+      id: 3,
+      patente: "LMN-456",
+      nombre: "Pulverizadora Apache 1240",
+      tipo: "suelo",
+      marcaModelo: "Apache / 1240",
+      estado: "disponible",
+      ultimoMantenimiento: "2024-08-10",
+    },
+    {
+      id: 4,
+      patente: "JKL-321",
+      nombre: "Camión Mercedes Benz Actros",
+      tipo: "suelo",
+      marcaModelo: "Mercedes Benz / Actros 2645",
+      estado: "fuera de servicio",
+      ultimoMantenimiento: "2024-03-20",
+    },
+    {
+      id: 5,
+      patente: "AV-001",
+      nombre: "Aeronave Pulverizadora AgriAir A320",
+      tipo: "aire",
+      marcaModelo: "AgriAir / A320",
+      estado: "disponible",
+      ultimoMantenimiento: "2024-09-10",
     },
   ];
 
-  const handleViewMachinery = (id: string) => {
-    console.log("Viewing machinery:", id);
+  const filteredMachinery = maquinarias.filter(
+    (maq) =>
+      maq.patente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      maq.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      maq.marcaModelo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case "disponible":
+        return (
+          <Badge className="bg-green-100 text-green-700">Disponible</Badge>
+        );
+      case "en uso":
+        return <Badge className="bg-blue-100 text-blue-700">En Uso</Badge>;
+      case "mantenimiento":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-700">Mantenimiento</Badge>
+        );
+      case "fuera de servicio":
+        return (
+          <Badge className="bg-red-100 text-red-700">Fuera de servicio</Badge>
+        );
+      default:
+        return <Badge variant="outline">{estado}</Badge>;
+    }
   };
 
-  const handleEditMachinery = (id: string) => {
-    console.log("Editing machinery:", id);
+  const getTipoIcon = (tipo?: string) => {
+    if (!tipo) return <Truck className="w-6 h-6 text-gray-500" />;
+    if (tipo === "aire") return <Airplane className="w-6 h-6 text-gray-500" />;
+    // suelo y otros
+    return <Truck className="w-6 h-6 text-gray-500" />;
   };
 
-  const handleDeleteMachinery = (id: string) => {
-    setDeleteMachineryId(id);
-  };
+  // const handleCreateMachinery = () => {
+  //   navigate("/machinery/new");
+  // };
+
+  const handleDeleteMachinery = (id: number) => setDeleteMachineryId(id);
 
   const confirmDelete = () => {
     if (deleteMachineryId) {
-      console.log("Deleting machinery:", deleteMachineryId);
+      console.log("Eliminando maquinaria:", deleteMachineryId);
       setDeleteMachineryId(null);
     }
   };
 
+  const handleViewMachinery = (id: number) => {
+    window.location.href = `#machinery-detail-${id}`;
+  };
+
+  const handleEditMachinery = (id: number) => {
+    window.location.href = `#machinery-edit-${id}`;
+  };
+
   return (
-    <TooltipProvider>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900">
-              Gestión de Maquinarias
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Controla el estado y mantenimiento de toda tu maquinaria agrícola.
-            </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold text-gray-900">Maquinarias</h1>
+          <p className="text-gray-600 mt-1">
+            Gestiona, supervisa y controla el estado de todas las maquinarias
+            disponibles.
+          </p>
+        </div>
+        <Button
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva maquinaria
+        </Button>
+      </div>
+
+      {/* Filtros y vista */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar maquinarias..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`pl-10 pr-4 py-2 w-full border rounded-lg focus:outline-none focus:ring-2 ${
+                searchTerm.trim() === ""
+                  ? "border-gray-200"
+                  : "border-green-500 focus:ring-green-500"
+              }`}
+            />
           </div>
-          <Button
-            className="bg-green-600 hover:bg-green-700"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Maquinaria
+          <Button variant="outline">
+            <Filter className="w-4 h-4 mr-2" />
+            Filtros
           </Button>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Truck className="w-8 h-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">15</p>
-                  <p className="text-gray-600">Total Maquinarias</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-green-600 rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">12</p>
-                  <p className="text-gray-600">Disponibles</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">2</p>
-                  <p className="text-gray-600">En Uso</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Wrench className="w-8 h-8 text-red-600" />
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">1</p>
-                  <p className="text-gray-600">En Mantenimiento</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters and View Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Buscar maquinaria..."
-                className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filtros
-            </Button>
-          </div>
-
-          <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-        </div>
-
-        {viewMode === "cards" ? (
-          /* Machinery List */
-          <div className="space-y-4">
-            {machinery.map((machine) => (
-              <Card key={machine.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Truck className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {machine.name}
-                        </h3>
-                        <p className="text-gray-600">
-                          {machine.id} • {machine.type}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-8">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="text-center cursor-help">
-                            <span
-                              className={`px-3 py-1 text-sm rounded-full font-medium ${
-                                machine.status === "Disponible"
-                                  ? "bg-green-100 text-green-600"
-                                  : machine.status === "En Uso"
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "bg-red-100 text-red-600"
-                              }`}
-                            >
-                              {machine.status}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Estado actual de la maquinaria</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="text-center cursor-help">
-                            <p className="font-medium text-gray-900">
-                              {machine.location}
-                            </p>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Ubicación actual</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="text-center cursor-help">
-                            <p className="font-medium text-gray-900">
-                              {machine.hoursWorked}h
-                            </p>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Horas trabajadas totales</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="text-center cursor-help">
-                            <div className="flex items-center text-sm font-medium text-gray-900">
-                              <Calendar className="w-4 h-4 mr-1 text-gray-500" />
-                              {machine.nextMaintenance}
-                            </div>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Próximo mantenimiento programado</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <TableActions
-                        onView={() => handleViewMachinery(machine.id)}
-                        onEdit={() => handleEditMachinery(machine.id)}
-                        onDelete={() => handleDeleteMachinery(machine.id)}
-                        viewLabel="Ver Detalles"
-                        forceDropdown={true}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          /* Added table view */
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Maquinaria
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Tipo
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Estado
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Ubicación
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Horas Trabajadas
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Último Mantenimiento
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Próximo Mantenimiento
-                      </th>
-                      <th className="text-left p-4 font-medium text-gray-900">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {machinery.map((machine) => (
-                      <tr
-                        key={machine.id}
-                        className="border-b hover:bg-gray-50"
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                              <Truck className="w-4 h-4 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {machine.name}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {machine.id}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm text-gray-900">
-                          {machine.type}
-                        </td>
-                        <td className="p-4">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full font-medium cursor-help ${
-                                  machine.status === "Disponible"
-                                    ? "bg-green-100 text-green-600"
-                                    : machine.status === "En Uso"
-                                    ? "bg-blue-100 text-blue-600"
-                                    : "bg-red-100 text-red-600"
-                                }`}
-                              >
-                                {machine.status}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Estado actual de la maquinaria</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                        <td className="p-4">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm text-gray-900 cursor-help">
-                                {machine.location}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Ubicación actual</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                        <td className="p-4">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm font-medium text-gray-900 cursor-help">
-                                {machine.hoursWorked}h
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Horas trabajadas totales</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                        <td className="p-4 text-sm text-gray-900">
-                          {machine.lastMaintenance}
-                        </td>
-                        <td className="p-4">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center text-sm font-medium text-gray-900 cursor-help">
-                                <Calendar className="w-4 h-4 mr-1 text-gray-500" />
-                                {machine.nextMaintenance}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Próximo mantenimiento programado</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                        <td className="p-4">
-                          <TableActions
-                            onView={() => handleViewMachinery(machine.id)}
-                            onEdit={() => handleEditMachinery(machine.id)}
-                            onDelete={() => handleDeleteMachinery(machine.id)}
-                            viewLabel="Ver Detalles"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Create Machinery Modal */}
-        <CreateMachineryModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog
-          open={deleteMachineryId !== null}
-          onOpenChange={() => setDeleteMachineryId(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. La maquinaria será eliminada
-                permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDelete}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
-    </TooltipProvider>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <CardStats
+          objeto={maquinarias}
+          titulo="Totales"
+          color="blue"
+          icono={<Truck className="w-8 h-8" />}
+        />
+        <CardStats
+          objeto={maquinarias}
+          titulo="Disponibles"
+          color="green"
+          icono={<CheckCircle className="w-8 h-8" />}
+        />
+        <CardStats
+          objeto={maquinarias}
+          titulo="En Uso"
+          color="blue"
+          icono={<Wrench className="w-8 h-8" />}
+        />
+        <CardStats
+          objeto={maquinarias}
+          titulo="Mantenimiento"
+          color="yellow"
+          icono={<AlertCircle className="w-8 h-8" />}
+        />
+      </div>
+      <CreateMachineryModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      {/* Vista Cards / Tabla */}
+      {viewMode === "cards" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredMachinery.map((maq) => (
+            <Card
+              key={maq.id}
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+            >
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      {getTipoIcon((maq as any).tipo)}
+                      <h3 className="text-lg font-semibold text-gray-900 ml-3">
+                        {maq.patente}
+                      </h3>
+                    </div>
+                    {getEstadoBadge(maq.estado)}
+                  </div>
+                  <p className="text-sm font-medium text-green-600 mb-1">
+                    {maq.nombre}
+                  </p>
+                  <p className="text-sm text-gray-500">{maq.marcaModelo}</p>
+                </div>
+                <TableActions
+                  onView={() => handleViewMachinery(maq.id)}
+                  onEdit={() => handleEditMachinery(maq.id)}
+                  onDelete={() => handleDeleteMachinery(maq.id)}
+                  showView
+                  showEdit
+                  showDelete
+                  forceDropdown
+                />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Último mantenimiento:</span>
+                    <p className="font-medium">
+                      {new Date(maq.ultimoMantenimiento).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Estado actual:</span>
+                    <p className="font-medium text-gray-700">{maq.estado}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nombre / Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Marca / Modelo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Último mantenimiento
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredMachinery.map((maq) => (
+                  <tr key={maq.id} className="hover:bg-gray-50 cursor-pointer">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {maq.patente}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700 flex items-center">
+                      <span className="ml-3">{maq.nombre}</span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {maq.marcaModelo}
+                    </td>
+                    <td className="px-6 py-4">{getEstadoBadge(maq.estado)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {new Date(maq.ultimoMantenimiento).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm font-medium">
+                      <TableActions
+                        onView={() => handleViewMachinery(maq.id)}
+                        onEdit={() => handleEditMachinery(maq.id)}
+                        onDelete={() => handleDeleteMachinery(maq.id)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo de confirmación de borrado */}
+      <AlertDialog
+        open={deleteMachineryId !== null}
+        onOpenChange={() => setDeleteMachineryId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La maquinaria será eliminada
+              permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {filteredMachinery.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          No se encontraron maquinarias.
+        </div>
+      )}
+    </div>
   );
 }

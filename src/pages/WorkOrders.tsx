@@ -1,10 +1,7 @@
-"use client";
-
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { TableActions } from "../components/ui/table-actions";
 import { ViewToggle } from "../components/ui/view-toggle";
 import {
@@ -17,11 +14,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
+import { useNavigate } from "react-router";
 
 export function WorkOrders() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
-  const navigate = useNavigate();
 
   const workOrders = [
     {
@@ -77,6 +74,8 @@ export function WorkOrders() {
     },
   ];
 
+  const navigate = useNavigate();
+
   const handleDeleteOrder = (id: number) => {
     setDeleteOrderId(id);
   };
@@ -88,8 +87,12 @@ export function WorkOrders() {
     }
   };
 
+  const handleWorkOrderClick = (id: number) => {
+    navigate(`/work-orders/${id}`);
+  };
+
   const handleViewOrder = (id: number) => {
-    console.log("Viewing order:", id);
+    navigate(`/work-orders/${id}`);
   };
 
   const handleCreateOrder = () => {
@@ -97,7 +100,7 @@ export function WorkOrders() {
   };
 
   const handleEditOrder = (id: number) => {
-    console.log("Editing order:", id);
+    navigate(`/work-orders/${id}/edit`);
   };
 
   return (
@@ -145,7 +148,8 @@ export function WorkOrders() {
           {workOrders.map((order) => (
             <Card
               key={order.id_orden_de_trabajo}
-              className="hover:shadow-lg transition-shadow"
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleWorkOrderClick(order.id_orden_de_trabajo)}
             >
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
                 <div className="flex-1">
@@ -174,13 +178,22 @@ export function WorkOrders() {
                   </p>
                 </div>
                 <TableActions
-                  onView={() => handleViewOrder(order.id_orden_de_trabajo)}
-                  onEdit={() => handleEditOrder(order.id_orden_de_trabajo)}
-                  onDelete={() => handleDeleteOrder(order.id_orden_de_trabajo)}
-                  showView={true}
-                  showEdit={true}
-                  showDelete={true}
-                  forceDropdown={true}
+                  onView={(e) => {
+                    e.stopPropagation();
+                    handleViewOrder(order.id_orden_de_trabajo);
+                  }}
+                  onEdit={(e) => {
+                    e.stopPropagation();
+                    handleEditOrder(order.id_orden_de_trabajo);
+                  }}
+                  onDelete={(e) => {
+                    e.stopPropagation();
+                    handleDeleteOrder(order.id_orden_de_trabajo);
+                  }}
+                  showView
+                  showEdit
+                  showDelete
+                  forceDropdown
                 />
               </CardHeader>
               <CardContent className="space-y-3">
@@ -248,7 +261,10 @@ export function WorkOrders() {
                 {workOrders.map((order) => (
                   <tr
                     key={order.id_orden_de_trabajo}
-                    className="hover:bg-gray-50"
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() =>
+                      handleWorkOrderClick(order.id_orden_de_trabajo)
+                    }
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       OT-{order.id_orden_de_trabajo.toString().padStart(3, "0")}
@@ -283,15 +299,18 @@ export function WorkOrders() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <TableActions
-                        onView={() =>
-                          handleViewOrder(order.id_orden_de_trabajo)
-                        }
-                        onEdit={() =>
-                          handleEditOrder(order.id_orden_de_trabajo)
-                        }
-                        onDelete={() =>
-                          handleDeleteOrder(order.id_orden_de_trabajo)
-                        }
+                        onView={(e) => {
+                          e.stopPropagation();
+                          handleViewOrder(order.id_orden_de_trabajo);
+                        }}
+                        onEdit={(e) => {
+                          e.stopPropagation();
+                          handleEditOrder(order.id_orden_de_trabajo);
+                        }}
+                        onDelete={(e) => {
+                          e.stopPropagation();
+                          handleDeleteOrder(order.id_orden_de_trabajo);
+                        }}
                       />
                     </td>
                   </tr>

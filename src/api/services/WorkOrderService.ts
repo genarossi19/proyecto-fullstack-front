@@ -1,6 +1,7 @@
 import api from "../../lib/axios";
 
 import type {
+  WorkOrderDetailResponse,
   WorkOrderSummaryResponse,
   WorkOrderType,
 } from "../../types/WorkOrder";
@@ -13,7 +14,7 @@ export const getAllWorkOrders = async (): Promise<
 
 export const getWorkOrder = async (
   id: number
-): Promise<WorkOrderSummaryResponse> => {
+): Promise<WorkOrderDetailResponse> => {
   const response = await api.get(`/workorders/${id}`);
   return response.data;
 };

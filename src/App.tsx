@@ -7,6 +7,7 @@ import { MachineryDetail } from "./pages/MachineryDetail";
 import { Clients } from "./pages/Clients";
 import { LotDetail } from "./pages/LotDetail";
 import { CreateWorkOrder } from "./pages/CreateWorkOrder";
+import { WorkOrderDetail } from "./pages/WorkOrderDetail";
 function App() {
   return (
     <>
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/work-orders" element={<WorkOrders />} />
+          <Route path="/work-orders/:id" element={<WorkOrderDetail />} />
           <Route path="/work-orders/new" element={<CreateWorkOrder />} />
           <Route path="/machinery" element={<Machinery />} />
           <Route path="/machinery/:id" element={<MachineryDetail />} />

@@ -92,6 +92,26 @@ export interface WorkOrderDetailResponse {
     id: number;
     name: string;
   };
-  machineryDetails: unknown[];
-  lotDetails: unknown[];
+  machineryDetails: {
+    id: number;
+    machinery: {
+      id: number;
+      name: string;
+      type: string;
+      brand: string;
+      model: string;
+      patent: string;
+      status: string;
+    };
+  }[];
+  lotDetails: {
+    id: number;
+    lot: {
+      id: number;
+      name: string;
+      area: number;
+      lat: number;
+      long: number;
+    };
+  }[];
 }

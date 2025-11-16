@@ -1,9 +1,9 @@
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader } from "../components/ui/card";
-import { useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import { TableActions } from "../components/ui/table-actions";
-import { ViewToggle } from "../components/ui/view-toggle";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,64 +15,140 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { useNavigate } from "react-router";
+import type { WorkOrderSummaryResponse } from "../types/WorkOrder";
+import { getAllWorkOrders } from "../api/services/WorkOrderService";
+import { toast } from "sonner";
+import { Skeleton } from "../components/ui/skeleton";
+import {
+  FilterWorkOrdersDropdown,
+  type FilterState,
+} from "../components/FilterWorkOrdersDropdown";
 
 export function WorkOrders() {
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
+  const [workOrders, setWorkOrders] = useState<WorkOrderSummaryResponse[]>([]);
+  const [filteredWorkOrders, setFilteredWorkOrders] = useState<
+    WorkOrderSummaryResponse[]
+  >([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] =
+    useState<boolean>(false);
+  const filterButtonRef = useRef<HTMLDivElement>(null);
+  const [filters, setFilters] = useState<FilterState>({
+    status: [],
+    createdAtFrom: "",
+    createdAtTo: "",
+    initDateFrom: "",
+    initDateTo: "",
+  });
 
-  const workOrders = [
-    {
-      id_orden_de_trabajo: 1,
-      id_cliente: 1,
-      id_campo: 1,
-      id_presupuesto: 1,
-      id_servicio: 1,
-      fecha_emision: "2024-01-10",
-      fecha_inicio: "2024-01-12",
-      fecha_fin: "2024-01-15",
-      campaña: "2024/25",
-      estado: "En Progreso",
-      observaciones: "Cosecha de maíz en lote principal",
-      cliente_nombre: "Finca San José",
-      campo_nombre: "Campo Norte",
-      servicio_nombre: "Cosecha de Maíz",
-      superficie_ha: 45.5,
-    },
-    {
-      id_orden_de_trabajo: 2,
-      id_cliente: 2,
-      id_campo: 2,
-      id_presupuesto: 2,
-      id_servicio: 2,
-      fecha_emision: "2024-01-11",
-      fecha_inicio: "2024-01-18",
-      fecha_fin: "2024-01-20",
-      campaña: "2024/25",
-      estado: "Pendiente",
-      observaciones: "Aplicación de herbicida pre-emergente",
-      cliente_nombre: "Agropecuaria Norte",
-      campo_nombre: "Lote B",
-      servicio_nombre: "Fumigación de Soja",
-      superficie_ha: 32.0,
-    },
-    {
-      id_orden_de_trabajo: 3,
-      id_cliente: 3,
-      id_campo: 3,
-      id_presupuesto: 3,
-      id_servicio: 3,
-      fecha_emision: "2024-01-05",
-      fecha_inicio: "2024-01-08",
-      fecha_fin: "2024-01-10",
-      campaña: "2024/25",
-      estado: "Completado",
-      observaciones: "Siembra directa con fertilización",
-      cliente_nombre: "Campo Verde",
-      campo_nombre: "Lote C",
-      servicio_nombre: "Siembra de Trigo",
-      superficie_ha: 28.3,
-    },
-  ];
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return ""; // por si es null
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0"); // meses 0-11
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const capitalizeFirst = (text: string | null | undefined): string => {
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  };
+
+  // Efecto para aplicar búsqueda y filtros
+  useEffect(() => {
+    applySearchAndFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, filters, workOrders]);
+
+  const applySearchAndFilters = () => {
+    let result = workOrders;
+
+    // Aplicar búsqueda
+    if (searchTerm.trim()) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      result = result.filter((order) => {
+        const orderNumber = `OT-${order.id
+          .toString()
+          .padStart(3, "0")}`.toLowerCase();
+        const clientName = order.client.name.toLowerCase();
+        const fieldName = order.field.name.toLowerCase();
+        const serviceName = order.service.name.toLowerCase();
+
+        return (
+          orderNumber.includes(lowerSearchTerm) ||
+          clientName.includes(lowerSearchTerm) ||
+          fieldName.includes(lowerSearchTerm) ||
+          serviceName.includes(lowerSearchTerm)
+        );
+      });
+    }
+
+    // Aplicar filtros
+    if (filters.status.length > 0) {
+      result = result.filter((order) => {
+        if (!order.status) return false;
+        return filters.status.includes(order.status);
+      });
+    }
+
+    if (filters.createdAtFrom) {
+      const fromDate = new Date(filters.createdAtFrom);
+      result = result.filter((order) => {
+        if (!order.created_at) return false;
+        return new Date(order.created_at) >= fromDate;
+      });
+    }
+
+    if (filters.createdAtTo) {
+      const toDate = new Date(filters.createdAtTo);
+      toDate.setHours(23, 59, 59, 999);
+      result = result.filter((order) => {
+        if (!order.created_at) return false;
+        return new Date(order.created_at) <= toDate;
+      });
+    }
+
+    if (filters.initDateFrom) {
+      const fromDate = new Date(filters.initDateFrom);
+      result = result.filter((order) => {
+        if (!order.init_date) return false;
+        return new Date(order.init_date) >= fromDate;
+      });
+    }
+
+    if (filters.initDateTo) {
+      const toDate = new Date(filters.initDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      result = result.filter((order) => {
+        if (!order.init_date) return false;
+        return new Date(order.init_date) <= toDate;
+      });
+    }
+
+    setFilteredWorkOrders(result);
+  };
+  useEffect(() => {
+    const fetchWorkOrders = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllWorkOrders();
+        setWorkOrders(response);
+        setLoading(false);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        toast.error("Error fetching work orders", {
+          description: errorMessage,
+        });
+        console.error("Error fetching work orders:", error);
+      }
+    };
+
+    fetchWorkOrders();
+  }, []);
 
   const navigate = useNavigate();
 
@@ -132,194 +208,146 @@ export function WorkOrders() {
             <input
               type="text"
               placeholder="Buscar órdenes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <Button variant="outline">
-            <Filter className="w-4 h-4 mr-2" />
-            Filtros
-          </Button>
-        </div>
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-      </div>
-
-      {viewMode === "cards" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {workOrders.map((order) => (
-            <Card
-              key={order.id_orden_de_trabajo}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => handleWorkOrderClick(order.id_orden_de_trabajo)}
+          <div className="relative" ref={filterButtonRef}>
+            <Button
+              variant="outline"
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
             >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {order.cliente_nombre}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        order.estado === "Completado"
-                          ? "bg-green-100 text-green-700"
-                          : order.estado === "En Progreso"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {order.estado}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-green-600 mb-1">
-                    {order.servicio_nombre}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    OT-{order.id_orden_de_trabajo.toString().padStart(3, "0")} |{" "}
-                    {order.fecha_inicio}
-                  </p>
-                </div>
-                <TableActions
-                  onView={(e) => {
-                    e.stopPropagation();
-                    handleViewOrder(order.id_orden_de_trabajo);
-                  }}
-                  onEdit={(e) => {
-                    e.stopPropagation();
-                    handleEditOrder(order.id_orden_de_trabajo);
-                  }}
-                  onDelete={(e) => {
-                    e.stopPropagation();
-                    handleDeleteOrder(order.id_orden_de_trabajo);
-                  }}
-                  showView
-                  showEdit
-                  showDelete
-                  forceDropdown
-                />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Campo:</span>
-                    <p className="font-medium">{order.campo_nombre}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Superficie:</span>
-                    <p className="font-medium">{order.superficie_ha} ha</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Campaña:</span>
-                    <p className="font-medium">{order.campaña}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Emisión:</span>
-                    <p className="font-medium">{order.fecha_emision}</p>
-                  </div>
-                </div>
-
-                {order.observaciones && (
-                  <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded-md">
-                    {order.observaciones}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Orden
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Servicio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Campo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Inicio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Superficie
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {workOrders.map((order) => (
-                  <tr
-                    key={order.id_orden_de_trabajo}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() =>
-                      handleWorkOrderClick(order.id_orden_de_trabajo)
-                    }
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      OT-{order.id_orden_de_trabajo.toString().padStart(3, "0")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.cliente_nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.servicio_nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.campo_nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.fecha_inicio}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          order.estado === "Completado"
-                            ? "bg-green-100 text-green-700"
-                            : order.estado === "En Progreso"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {order.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.superficie_ha} ha
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <TableActions
-                        onView={(e) => {
-                          e.stopPropagation();
-                          handleViewOrder(order.id_orden_de_trabajo);
-                        }}
-                        onEdit={(e) => {
-                          e.stopPropagation();
-                          handleEditOrder(order.id_orden_de_trabajo);
-                        }}
-                        onDelete={(e) => {
-                          e.stopPropagation();
-                          handleDeleteOrder(order.id_orden_de_trabajo);
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              <Filter className="w-4 h-4 mr-2" />
+              Filtros
+            </Button>
+            <FilterWorkOrdersDropdown
+              isOpen={isFilterDropdownOpen}
+              onClose={() => setIsFilterDropdownOpen(false)}
+              onApplyFilters={setFilters}
+              currentFilters={filters}
+              anchorRef={filterButtonRef}
+            />
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Orden
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Servicio
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Campo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha Emision
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha Inicio
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading
+                ? Array.from({ length: 5 }).map(
+                    (
+                      _,
+                      idx // 5 filas de ejemplo
+                    ) => (
+                      <tr key={idx} className="animate-pulse">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-16" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-24" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-20" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-20" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-24" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-20 rounded-full" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Skeleton className="h-4 w-16" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <Skeleton className="h-4 w-24" />
+                        </td>
+                      </tr>
+                    )
+                  )
+                : filteredWorkOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleWorkOrderClick(order.id)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        OT-{order.id.toString().padStart(3, "0")}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {order.client.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {order.service.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {order.field.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(order.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(order.init_date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            order.status === "Completado"
+                              ? "bg-green-100 text-green-700"
+                              : order.status === "En Progreso"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {capitalizeFirst(order.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <TableActions
+                          onView={() => handleViewOrder(order.id)}
+                          onEdit={() => handleEditOrder(order.id)}
+                          onDelete={() => handleDeleteOrder(order.id)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

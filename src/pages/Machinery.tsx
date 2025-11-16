@@ -31,7 +31,7 @@ import {
 } from ".././components/ui/alert-dialog";
 import { CreateMachineryModal } from ".././components/CreateMachineryModal";
 
-export default function Machinery() {
+export function Machinery() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -188,38 +188,6 @@ export default function Machinery() {
         </div>
         <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <CardStats
-          objeto={maquinarias}
-          titulo="Totales"
-          color="blue"
-          icono={<Truck className="w-8 h-8" />}
-        />
-        <CardStats
-          objeto={maquinarias}
-          titulo="Disponibles"
-          color="green"
-          icono={<CheckCircle className="w-8 h-8" />}
-        />
-        <CardStats
-          objeto={maquinarias}
-          titulo="En Uso"
-          color="blue"
-          icono={<Wrench className="w-8 h-8" />}
-        />
-        <CardStats
-          objeto={maquinarias}
-          titulo="Mantenimiento"
-          color="yellow"
-          icono={<AlertCircle className="w-8 h-8" />}
-        />
-      </div>
-      <CreateMachineryModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      />
 
       {/* Vista Cards / Tabla */}
       {viewMode === "cards" ? (

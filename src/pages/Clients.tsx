@@ -147,59 +147,6 @@ export function Clients() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="w-8 h-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">48</p>
-                <p className="text-gray-600">Total Clientes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-green-600 rounded-full"></div>
-              </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">42</p>
-                <p className="text-gray-600">Activos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
-              </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">15</p>
-                <p className="text-gray-600">Órdenes Activas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-yellow-600 rounded-full"></div>
-              </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">6</p>
-                <p className="text-gray-600">Nuevos este mes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="relative flex-1 max-w-md">
@@ -329,9 +276,7 @@ export function Clients() {
                     <th className="text-left p-4 font-medium text-gray-900">
                       Dirección
                     </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Condición IVA
-                    </th>
+
                     <th className="text-left p-4 font-medium text-gray-900">
                       Estado
                     </th>
@@ -368,9 +313,7 @@ export function Clients() {
                       <td className="p-4 text-sm text-gray-900">
                         {client.direccion}, {client.localidad}
                       </td>
-                      <td className="p-4 text-sm text-blue-600">
-                        {client.condicion_iva}
-                      </td>
+
                       <td className="p-4">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${

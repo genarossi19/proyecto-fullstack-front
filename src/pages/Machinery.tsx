@@ -1,23 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardHeader, CardContent } from ".././components/ui/card";
 import { Button } from ".././components/ui/button";
 import { Badge } from "../components/ui/badge";
 // Progress not used on this page
-import {
-  Search,
-  Plus,
-  Filter,
-  Wrench,
-  CheckCircle,
-  AlertCircle,
-  Plane as Airplane,
-  Truck,
-} from "lucide-react";
-import { ViewToggle } from ".././components/ui/view-toggle";
-import CardStats from "../components/CardStats";
+import { Search, Plus, Filter, Plane as Airplane, Truck } from "lucide-react";
+import { getAllMachineries } from "../api/services/MachineryService";
 import { TableActions } from ".././components/ui/table-actions";
 import {
   AlertDialog,
@@ -30,84 +20,51 @@ import {
   AlertDialogTitle,
 } from ".././components/ui/alert-dialog";
 import { CreateMachineryModal } from ".././components/CreateMachineryModal";
+import type { MachineryType } from "../types/Machinery";
 
 export function Machinery() {
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deleteMachineryId, setDeleteMachineryId] = useState<number | null>(
     null
   );
+  const [machineries, setMachineries] = useState<MachineryType[]>([]);
   const navigate = useNavigate();
 
-  const maquinarias = [
-    {
-      id: 1,
-      patente: "ABC-123",
-      nombre: "Tractor John Deere 6120",
-      tipo: "suelo",
-      marcaModelo: "John Deere / 6120M",
-      estado: "en uso",
-      ultimoMantenimiento: "2024-09-15",
-    },
-    {
-      id: 2,
-      patente: "XYZ-789",
-      nombre: "Cosechadora Case IH 8230",
-      tipo: "suelo",
-      marcaModelo: "Case IH / 8230",
-      estado: "mantenimiento",
-      ultimoMantenimiento: "2024-10-02",
-    },
-    {
-      id: 3,
-      patente: "LMN-456",
-      nombre: "Pulverizadora Apache 1240",
-      tipo: "suelo",
-      marcaModelo: "Apache / 1240",
-      estado: "disponible",
-      ultimoMantenimiento: "2024-08-10",
-    },
-    {
-      id: 4,
-      patente: "JKL-321",
-      nombre: "Camión Mercedes Benz Actros",
-      tipo: "suelo",
-      marcaModelo: "Mercedes Benz / Actros 2645",
-      estado: "fuera de servicio",
-      ultimoMantenimiento: "2024-03-20",
-    },
-    {
-      id: 5,
-      patente: "AV-001",
-      nombre: "Aeronave Pulverizadora AgriAir A320",
-      tipo: "aire",
-      marcaModelo: "AgriAir / A320",
-      estado: "disponible",
-      ultimoMantenimiento: "2024-09-10",
-    },
-  ];
+  useEffect(() => {
+    const fetchMachineries = async () => {
+      try {
+        const response = await getAllMachineries();
+        setMachineries(response);
+      } catch (error) {
+        console.error("Error fetching machineries:", error);
+      }
+    };
 
-  const filteredMachinery = maquinarias.filter(
+    fetchMachineries();
+  }, []);
+
+  const filteredMachinery = machineries.filter(
     (maq) =>
-      maq.patente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      maq.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      maq.marcaModelo.toLowerCase().includes(searchTerm.toLowerCase())
+      maq.patent?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      maq.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      maq.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      maq.model.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
-      case "disponible":
+      case "Disponible":
         return (
           <Badge className="bg-green-100 text-green-700">Disponible</Badge>
         );
-      case "en uso":
+      case "En Uso":
         return <Badge className="bg-blue-100 text-blue-700">En Uso</Badge>;
-      case "mantenimiento":
+      case "Mantenimiento":
         return (
           <Badge className="bg-yellow-100 text-yellow-700">Mantenimiento</Badge>
         );
-      case "fuera de servicio":
+      case "Fuera de Servicio":
         return (
           <Badge className="bg-red-100 text-red-700">Fuera de servicio</Badge>
         );
@@ -186,116 +143,62 @@ export function Machinery() {
             Filtros
           </Button>
         </div>
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
 
-      {/* Vista Cards / Tabla */}
-      {viewMode === "cards" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredMachinery.map((maq) => (
-            <Card
-              key={maq.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      {getTipoIcon((maq as any).tipo)}
-                      <h3 className="text-lg font-semibold text-gray-900 ml-3">
-                        {maq.patente}
-                      </h3>
-                    </div>
-                    {getEstadoBadge(maq.estado)}
-                  </div>
-                  <p className="text-sm font-medium text-green-600 mb-1">
-                    {maq.nombre}
-                  </p>
-                  <p className="text-sm text-gray-500">{maq.marcaModelo}</p>
-                </div>
-                <TableActions
-                  onView={() => handleViewMachinery(maq.id)}
-                  onEdit={() => handleEditMachinery(maq.id)}
-                  onDelete={() => handleDeleteMachinery(maq.id)}
-                  showView
-                  showEdit
-                  showDelete
-                  forceDropdown
-                />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Último mantenimiento:</span>
-                    <p className="font-medium">
-                      {new Date(maq.ultimoMantenimiento).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Estado actual:</span>
-                    <p className="font-medium text-gray-700">{maq.estado}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nombre / Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Marca / Modelo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Último mantenimiento
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nombre / Tipo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Marca / Modelo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredMachinery.map((maq) => (
+                <tr key={maq.id} className="hover:bg-gray-50 cursor-pointer">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    {maq.patent}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700 flex items-center">
+                    <span className="ml-3">{maq.name}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {maq.brand}
+                  </td>
+                  <td className="px-6 py-4">{getEstadoBadge(maq.status)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {maq.type}
+                  </td>
+                  <td className="px-6 py-4 text-right text-sm font-medium">
+                    <TableActions
+                      onView={() => handleViewMachinery(maq.id)}
+                      onEdit={() => handleEditMachinery(maq.id)}
+                      onDelete={() => handleDeleteMachinery(maq.id)}
+                    />
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMachinery.map((maq) => (
-                  <tr key={maq.id} className="hover:bg-gray-50 cursor-pointer">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {maq.patente}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700 flex items-center">
-                      <span className="ml-3">{maq.nombre}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {maq.marcaModelo}
-                    </td>
-                    <td className="px-6 py-4">{getEstadoBadge(maq.estado)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {new Date(maq.ultimoMantenimiento).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
-                      <TableActions
-                        onView={() => handleViewMachinery(maq.id)}
-                        onEdit={() => handleEditMachinery(maq.id)}
-                        onDelete={() => handleDeleteMachinery(maq.id)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Diálogo de confirmación de borrado */}
       <AlertDialog

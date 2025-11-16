@@ -1,7 +1,7 @@
 export interface ClientType {
   id: number;
   name: string;
-  CUIT: number;
+  cuit: number;
   active: boolean;
   email: string;
   phone: string;

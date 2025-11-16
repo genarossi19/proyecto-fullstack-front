@@ -1,14 +1,4 @@
-import {
-  Plus,
-  Search,
-  Filter,
-  Users,
-  Phone,
-  Mail,
-  MapPin,
-  TreePine,
-  LayoutGrid,
-} from "lucide-react";
+import { Plus, Search, Filter, TreePine, LayoutGrid } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -16,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateClientModal } from "../components/CreateClientModal";
 import { TableActions } from "../components/ui/table-actions";
 import {
@@ -29,71 +19,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
-import { ViewToggle } from "../components/ui/view-toggle";
+
 import { CreateFieldModal } from "../components/CreateFieldModal";
 import { EditFieldModal } from "../components/EditFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
 import { EditLotModal } from "../components/EditLotModal";
+import type { ClientType } from "../types/ClientType";
+import { getAllClients } from "../api/services/ClientService";
 
 export function Clients() {
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [clients, setClients] = useState<ClientType[]>([]);
 
-  const clients = [
-    {
-      id_cliente: 1,
-      id_condicion_iva: 1,
-      id_calle: 1,
-      altura: 1250,
-      CUIT: 20123456789,
-      razon_social: "Finca San José S.A.",
-      email: "roberto@fincasanjose.com",
-      direccion: "Av. San Martín 1250",
-      telefono: "+54 11 1234-5678",
-      activo: true,
-      condicion_iva: "Responsable Inscripto",
-      calle: "Av. San Martín",
-      localidad: "Buenos Aires",
-      activeOrders: 3,
-      totalOrders: 25,
-    },
-    {
-      id_cliente: 2,
-      id_condicion_iva: 1,
-      id_calle: 2,
-      altura: 850,
-      CUIT: 20987654321,
-      razon_social: "Agropecuaria Norte S.R.L.",
-      email: "maria@agronorte.com",
-      direccion: "Belgrano 850",
-      telefono: "+54 11 2345-6789",
-      activo: true,
-      condicion_iva: "Responsable Inscripto",
-      calle: "Belgrano",
-      localidad: "Córdoba",
-      activeOrders: 1,
-      totalOrders: 18,
-    },
-    {
-      id_cliente: 3,
-      id_condicion_iva: 2,
-      id_calle: 3,
-      altura: 456,
-      CUIT: 20456789123,
-      razon_social: "Campo Verde Ltda.",
-      email: "carlos@campoverde.com",
-      direccion: "Mitre 456",
-      telefono: "+54 11 3456-7890",
-      activo: false,
-      condicion_iva: "Monotributo",
-      calle: "Mitre",
-      localidad: "Santa Fe",
-      activeOrders: 0,
-      totalOrders: 12,
-    },
-  ];
+  useEffect(() => {
+    const fetClients = async () => {
+      try {
+        const response = await getAllClients();
+        setClients(response);
+      } catch (error) {
+        console.error("Error fetching machineries:", error);
+      }
+    };
+
+    fetClients();
+  }, []);
 
   const handleViewClient = (id: number) => {
     setSelectedClientId(id);
@@ -162,194 +113,95 @@ export function Clients() {
             Filtros
           </Button>
         </div>
-
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
 
-      {viewMode === "cards" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {clients.map((client) => (
-            <Card
-              key={client.id_cliente}
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle className="text-lg">
-                    {client.razon_social}
-                  </CardTitle>
-                  <p className="text-sm text-gray-500">
-                    CLI-{client.id_cliente.toString().padStart(3, "0")}
-                  </p>
-                </div>
-                <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    client.activo
-                      ? "bg-green-100 text-green-600"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {client.activo ? "Activo" : "Inactivo"}
-                </span>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">CUIT: {client.CUIT}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">{client.telefono}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">{client.email}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">
-                      {client.direccion}, {client.localidad}
-                    </span>
-                  </div>
-                </div>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Razón Social
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    CUIT
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Teléfono
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Email
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Dirección
+                  </th>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Condición IVA:</span>
-                    <span className="font-medium text-blue-600">
-                      {client.condicion_iva}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Órdenes Activas:</span>
-                    <span className="font-medium text-green-600">
-                      {client.activeOrders}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Total Órdenes:</span>
-                    <span className="font-medium">{client.totalOrders}</span>
-                  </div>
-                </div>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Estado
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((client) => (
+                  <tr key={client.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {client.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          CLI-{client.id.toString().padStart(3, "0")}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm text-gray-900">{client.cuit}</td>
+                    <td className="p-4 text-sm text-gray-900">
+                      {client.phone}
+                    </td>
+                    <td className="p-4 text-sm text-gray-900">
+                      {client.email}
+                    </td>
+                    <td className="p-4 text-sm text-gray-900">
+                      {client.address}
+                    </td>
 
-                <div className="flex space-x-2">
-                  <div className="flex-1">
-                    <TableActions
-                      onView={() => handleViewClient(client.id_cliente)}
-                      onEdit={() => handleEditClient(client.id_cliente)}
-                      onDelete={() => handleDeleteClient(client.id_cliente)}
-                      viewLabel="Ver Detalles"
-                      forceDropdown={true}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    Nueva Orden
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Razón Social
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      CUIT
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Teléfono
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Email
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Dirección
-                    </th>
-
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Estado
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clients.map((client) => (
-                    <tr
-                      key={client.id_cliente}
-                      className="border-b hover:bg-gray-50"
-                    >
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {client.razon_social}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            CLI-{client.id_cliente.toString().padStart(3, "0")}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {client.CUIT}
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {client.telefono}
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {client.email}
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {client.direccion}, {client.localidad}
-                      </td>
-
-                      <td className="p-4">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            client.activo
-                              ? "bg-green-100 text-green-600"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
+                    <td className="p-4">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          client.active
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {client.active ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
+                        <TableActions
+                          onView={() => handleViewClient(client.id)}
+                          onEdit={() => handleEditClient(client.id)}
+                          onDelete={() => handleDeleteClient(client.id)}
+                        />
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
                         >
-                          {client.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <TableActions
-                            onView={() => handleViewClient(client.id_cliente)}
-                            onEdit={() => handleEditClient(client.id_cliente)}
-                            onDelete={() =>
-                              handleDeleteClient(client.id_cliente)
-                            }
-                          />
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            Orden
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                          Orden
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <CreateClientModal
         isOpen={isCreateModalOpen}
@@ -551,138 +403,77 @@ function ClientFieldsView({
             Filtros
           </Button>
         </div>
-
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
 
-      {viewMode === "cards" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {fields.map((field) => (
-            <Card
-              key={field.id_campo}
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle className="text-lg">{field.nombre}</CardTitle>
-                  <p className="text-sm text-gray-500">
-                    CAM-{field.id_campo.toString().padStart(3, "0")}
-                  </p>
-                </div>
-                <LayoutGrid className="w-5 h-5 text-blue-600" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Superficie:</span>
-                    <span className="font-medium">
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Nombre
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Superficie (ha)
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Cultivo Actual
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Lotes
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Coordenadas
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-900">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((field) => (
+                  <tr
+                    key={field.id_campo}
+                    className="border-b hover:bg-gray-50"
+                  >
+                    <td className="p-4">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {field.nombre}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          CAM-{field.id_campo.toString().padStart(3, "0")}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm text-gray-900">
                       {field.superficie_ha} ha
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Cultivo Actual:</span>
-                    <span className="font-medium text-green-600">
+                    </td>
+                    <td className="p-4 text-sm text-green-600">
                       {field.cultivo_actual}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Lotes:</span>
-                    <span className="font-medium text-blue-600">
+                    </td>
+                    <td className="p-4 text-sm text-blue-600">
                       {field.lotes_count}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Coordenadas:</span>
-                    <span className="font-medium text-xs">
+                    </td>
+                    <td className="p-4 text-sm text-gray-900">
                       {field.latitud.toFixed(4)}, {field.longitud.toFixed(4)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <TableActions
-                    onView={() => handleViewField(field.id_campo)}
-                    onEdit={() => handleEditField(field.id_campo)}
-                    onDelete={() => handleDeleteField(field.id_campo)}
-                    viewLabel="Ver Lotes"
-                    forceDropdown={true}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Nombre
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Superficie (ha)
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Cultivo Actual
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Lotes
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Coordenadas
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Acciones
-                    </th>
+                    </td>
+                    <td className="p-4">
+                      <TableActions
+                        onView={() => handleViewField(field.id_campo)}
+                        onEdit={() => handleEditField(field.id_campo)}
+                        onDelete={() => handleDeleteField(field.id_campo)}
+                        viewLabel="Ver Lotes"
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {fields.map((field) => (
-                    <tr
-                      key={field.id_campo}
-                      className="border-b hover:bg-gray-50"
-                    >
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {field.nombre}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            CAM-{field.id_campo.toString().padStart(3, "0")}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {field.superficie_ha} ha
-                      </td>
-                      <td className="p-4 text-sm text-green-600">
-                        {field.cultivo_actual}
-                      </td>
-                      <td className="p-4 text-sm text-blue-600">
-                        {field.lotes_count}
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {field.latitud.toFixed(4)}, {field.longitud.toFixed(4)}
-                      </td>
-                      <td className="p-4">
-                        <TableActions
-                          onView={() => handleViewField(field.id_campo)}
-                          onEdit={() => handleEditField(field.id_campo)}
-                          onDelete={() => handleDeleteField(field.id_campo)}
-                          viewLabel="Ver Lotes"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <CreateFieldModal
         isOpen={isCreateFieldModalOpen}

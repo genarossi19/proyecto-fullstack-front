@@ -1,7 +1,9 @@
-export default interface MachineryType {
+export interface MachineryType {
   id: number;
   name: string;
+  type: string;
   brand: string;
   model: string;
-  type: string;
+  patent?: string;
+  status: "En Uso" | "Mantenimiento" | "Disponible" | "Fuera de Servicio";
 }

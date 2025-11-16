@@ -94,11 +94,11 @@ export function Machinery() {
   };
 
   const handleViewMachinery = (id: number) => {
-    window.location.href = `#machinery-detail-${id}`;
+    navigate(`/machinery/${id}`);
   };
 
   const handleEditMachinery = (id: number) => {
-    window.location.href = `#machinery-edit-${id}`;
+    navigate(`/machinery/${id}/edit`);
   };
 
   return (
@@ -154,7 +154,7 @@ export function Machinery() {
                   Patente
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre / Tipo
+                  Nombre
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Marca / Modelo
@@ -172,7 +172,11 @@ export function Machinery() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMachinery.map((maq) => (
-                <tr key={maq.id} className="hover:bg-gray-50 cursor-pointer">
+                <tr
+                  key={maq.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleViewMachinery(maq.id)}
+                >
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {maq.patent}
                   </td>
@@ -180,7 +184,7 @@ export function Machinery() {
                     <span className="ml-3">{maq.name}</span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
-                    {maq.brand}
+                    {maq.brand} - {maq.model}
                   </td>
                   <td className="px-6 py-4">{getEstadoBadge(maq.status)}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">
@@ -188,9 +192,18 @@ export function Machinery() {
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <TableActions
-                      onView={() => handleViewMachinery(maq.id)}
-                      onEdit={() => handleEditMachinery(maq.id)}
-                      onDelete={() => handleDeleteMachinery(maq.id)}
+                      onView={(e) => {
+                        e.stopPropagation();
+                        handleViewMachinery(maq.id);
+                      }}
+                      onEdit={(e) => {
+                        e.stopPropagation();
+                        handleEditMachinery(maq.id);
+                      }}
+                      onDelete={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMachinery(maq.id);
+                      }}
                     />
                   </td>
                 </tr>

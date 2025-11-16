@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { CreateClientModal } from "../components/CreateClientModal";
 import { TableActions } from "../components/ui/table-actions";
 import {
@@ -25,7 +26,10 @@ import { EditFieldModal } from "../components/EditFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
 import { EditLotModal } from "../components/EditLotModal";
 import type { ClientType } from "../types/ClientType";
-import { getAllClients } from "../api/services/ClientService";
+import { getAllClients, getClientbyId } from "../api/services/ClientService";
+import { getFieldById } from "../api/services/FieldService";
+import { toast } from "sonner";
+import { Skeleton } from "../components/ui/skeleton";
 
 export function Clients() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -147,7 +151,11 @@ export function Clients() {
               </thead>
               <tbody>
                 {clients.map((client) => (
-                  <tr key={client.id} className="border-b hover:bg-gray-50">
+                  <tr
+                    key={client.id}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleViewClient(client.id)}
+                  >
                     <td className="p-4">
                       <div>
                         <p className="font-medium text-gray-900">
@@ -180,7 +188,7 @@ export function Clients() {
                         {client.active ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center space-x-2">
                         <TableActions
                           onView={() => handleViewClient(client.id)}
@@ -190,6 +198,9 @@ export function Clients() {
                         <Button
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                         >
                           Orden
                         </Button>
@@ -242,49 +253,47 @@ function ClientFieldsView({
   clientId: number;
   onBack: () => void;
 }) {
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [isCreateFieldModalOpen, setIsCreateFieldModalOpen] = useState(false);
   const [deleteFieldId, setDeleteFieldId] = useState<number | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
+  const [selectedField, setSelectedField] = useState<any>(null);
   const [editField, setEditField] = useState<any>(null);
   const [isEditFieldModalOpen, setIsEditFieldModalOpen] = useState(false);
+  const [client, setClient] = useState<any>(null);
+  const [fields, setFields] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for client
-  const client = {
-    id_cliente: clientId,
-    razon_social: "Finca San José S.A.",
-  };
+  useEffect(() => {
+    const fetchClientData = async () => {
+      try {
+        setLoading(true);
+        const clientData = await getClientbyId(clientId);
+        setClient(clientData);
+        // Asumiendo que la respuesta tiene un array de fields
+        setFields(clientData.fields || []);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        toast.error("Error al cargar los datos del cliente", {
+          description: errorMessage,
+        });
+        console.error("Error fetching client data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock data for fields
-  const fields = [
-    {
-      id_campo: 1,
-      id_cliente: clientId,
-      nombre: "Campo Norte",
-      superficie_ha: 150.5,
-      latitud: -34.6037,
-      longitud: -58.3816,
-      cultivo_actual: "Soja",
-      lotes_count: 8,
-    },
-    {
-      id_campo: 2,
-      id_cliente: clientId,
-      nombre: "Campo Sur",
-      superficie_ha: 200.0,
-      latitud: -34.6137,
-      longitud: -58.3916,
-      cultivo_actual: "Maíz",
-      lotes_count: 12,
-    },
-  ];
+    fetchClientData();
+  }, [clientId]);
 
   const handleViewField = (fieldId: number) => {
+    const field = fields.find((f: any) => f.id === fieldId);
     setSelectedFieldId(fieldId);
+    setSelectedField(field);
   };
 
   const handleEditField = (fieldId: number) => {
-    const field = fields.find((f) => f.id_campo === fieldId);
+    const field = fields.find((f: any) => f.id === fieldId);
     if (field) {
       setEditField(field);
       setIsEditFieldModalOpen(true);
@@ -304,14 +313,16 @@ function ClientFieldsView({
 
   const handleBackToFields = () => {
     setSelectedFieldId(null);
+    setSelectedField(null);
   };
 
   // Show field lots view when a field is selected
-  if (selectedFieldId) {
+  if (selectedFieldId && selectedField) {
     return (
       <FieldLotsView
         fieldId={selectedFieldId}
-        clientName={client.razon_social}
+        fieldData={selectedField}
+        clientName={client?.name || "Cliente"}
         onBack={handleBackToFields}
       />
     );
@@ -326,7 +337,7 @@ function ClientFieldsView({
           </Button>
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">
-              Campos de {client.razon_social}
+              Campos de {client?.name || "Cliente"}
             </h1>
             <p className="text-gray-600 mt-1">
               Administra los campos y lotes de este cliente.
@@ -346,43 +357,85 @@ function ClientFieldsView({
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <TreePine className="w-8 h-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {fields.length}
-                </p>
-                <p className="text-gray-600">Total Campos</p>
-              </div>
+              {loading ? (
+                <>
+                  <Skeleton className="w-8 h-8 rounded" />
+                  <div className="ml-4 flex-1">
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <TreePine className="w-8 h-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {fields?.length || 0}
+                    </p>
+                    <p className="text-gray-600">Total Campos</p>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <LayoutGrid className="w-8 h-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {fields.reduce((sum, field) => sum + field.lotes_count, 0)}
-                </p>
-                <p className="text-gray-600">Total Lotes</p>
-              </div>
+              {loading ? (
+                <>
+                  <Skeleton className="w-8 h-8 rounded" />
+                  <div className="ml-4 flex-1">
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <LayoutGrid className="w-8 h-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {fields?.reduce(
+                        (sum: number, field: any) => sum + (field.lots || 0),
+                        0
+                      ) || 0}
+                    </p>
+                    <p className="text-gray-600">Total Lotes</p>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-yellow-600 rounded-full"></div>
-              </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {fields
-                    .reduce((sum, field) => sum + field.superficie_ha, 0)
-                    .toFixed(1)}
-                </p>
-                <p className="text-gray-600">Hectáreas Totales</p>
-              </div>
+              {loading ? (
+                <>
+                  <Skeleton className="w-8 h-8 rounded" />
+                  <div className="ml-4 flex-1">
+                    <Skeleton className="h-8 w-16 mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 bg-yellow-600 rounded-full"></div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {fields
+                        ?.reduce(
+                          (sum: number, field: any) => sum + (field.area || 0),
+                          0
+                        )
+                        .toFixed(1) || 0}
+                    </p>
+                    <p className="text-gray-600">Hectáreas Totales</p>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -432,43 +485,64 @@ function ClientFieldsView({
                 </tr>
               </thead>
               <tbody>
-                {fields.map((field) => (
-                  <tr
-                    key={field.id_campo}
-                    className="border-b hover:bg-gray-50"
-                  >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {field.nombre}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          CAM-{field.id_campo.toString().padStart(3, "0")}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {field.superficie_ha} ha
-                    </td>
-                    <td className="p-4 text-sm text-green-600">
-                      {field.cultivo_actual}
-                    </td>
-                    <td className="p-4 text-sm text-blue-600">
-                      {field.lotes_count}
-                    </td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {field.latitud.toFixed(4)}, {field.longitud.toFixed(4)}
-                    </td>
-                    <td className="p-4">
-                      <TableActions
-                        onView={() => handleViewField(field.id_campo)}
-                        onEdit={() => handleEditField(field.id_campo)}
-                        onDelete={() => handleDeleteField(field.id_campo)}
-                        viewLabel="Ver Lotes"
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {loading
+                  ? Array.from({ length: 4 }).map((_, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-3 w-16" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-16" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-16" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-8" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-32" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-20" />
+                        </td>
+                      </tr>
+                    ))
+                  : fields?.map((field: any) => (
+                      <tr key={field.id} className="border-b hover:bg-gray-50">
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {field.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              CAM-{field.id.toString().padStart(3, "0")}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {field.area} ha
+                        </td>
+                        <td className="p-4 text-sm text-green-600">
+                          {field.active ? "Activo" : "Inactivo"}
+                        </td>
+                        <td className="p-4 text-sm text-blue-600">
+                          {field.lots}
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {field.lat?.toFixed(4)}, {field.long?.toFixed(4)}
+                        </td>
+                        <td className="p-4">
+                          <TableActions
+                            onView={() => handleViewField(field.id)}
+                            onEdit={() => handleEditField(field.id)}
+                            onDelete={() => handleDeleteField(field.id)}
+                            viewLabel="Ver Lotes"
+                          />
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>
@@ -479,7 +553,7 @@ function ClientFieldsView({
         isOpen={isCreateFieldModalOpen}
         onClose={() => setIsCreateFieldModalOpen(false)}
         clientId={clientId}
-        clientName={client.razon_social}
+        clientName={client?.name || "Cliente"}
       />
 
       <EditFieldModal
@@ -489,7 +563,7 @@ function ClientFieldsView({
           setEditField(null);
         }}
         field={editField}
-        clientName={client.razon_social}
+        clientName={client?.name || "Cliente"}
       />
 
       <AlertDialog
@@ -521,64 +595,58 @@ function ClientFieldsView({
 
 function FieldLotsView({
   fieldId,
+  fieldData,
   clientName,
   onBack,
 }: {
   fieldId: number;
+  fieldData: any;
   clientName: string;
   onBack: () => void;
 }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [lots, setLots] = useState<any[]>([]);
   const [isCreateLotModalOpen, setIsCreateLotModalOpen] = useState(false);
   const [deleteLotId, setDeleteLotId] = useState<number | null>(null);
   const [editLot, setEditLot] = useState<any>(null);
   const [isEditLotModalOpen, setIsEditLotModalOpen] = useState(false);
 
-  // Mock data for field
   const field = {
-    id_campo: fieldId,
-    nombre: "Campo Norte",
-    superficie_ha: 150.5,
+    id_campo: fieldData?.id || fieldId,
+    nombre: fieldData?.name || "Campo",
+    superficie_ha: fieldData?.area || 0,
   };
 
-  // Mock data for lots
-  const lots = [
-    {
-      id_lote: 1,
-      id_campo: fieldId,
-      nombre: "Lote A1",
-      superficie_ha: 25.5,
-      id_cultivo: 1,
-      cultivo: "Soja",
-      id_estadio: 1,
-      estadio: "Vegetativo",
-      latitud: -34.6037,
-      longitud: -58.3816,
-    },
-    {
-      id_lote: 2,
-      id_campo: fieldId,
-      nombre: "Lote A2",
-      superficie_ha: 30.0,
-      id_cultivo: 2,
-      cultivo: "Maíz",
-      id_estadio: 2,
-      estadio: "Floración",
-      latitud: -34.6047,
-      longitud: -58.3826,
-    },
-  ];
+  useEffect(() => {
+    const fetchLots = async () => {
+      try {
+        setLoading(true);
+        const fieldWithLots = await getFieldById(fieldId);
+        setLots(fieldWithLots?.lots || []);
+      } catch (error) {
+        console.error("Error fetching lots:", error);
+        toast.error("Error al cargar los lotes del campo");
+        setLots([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleViewLot = (lotId: number) => {
-    console.log("Viewing lot:", lotId);
-  };
+    fetchLots();
+  }, [fieldId]);
 
   const handleEditLot = (lotId: number) => {
-    const lot = lots.find((l) => l.id_lote === lotId);
+    const lot = lots.find((l: any) => l.id === lotId);
     if (lot) {
       setEditLot(lot);
       setIsEditLotModalOpen(true);
     }
+  };
+
+  const handleViewLot = (lotId: number) => {
+    navigate(`/lots/${lotId}`);
   };
 
   const handleDeleteLot = (lotId: number) => {
@@ -620,52 +688,75 @@ function FieldLotsView({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <LayoutGrid className="w-8 h-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {lots.length}
-                </p>
-                <p className="text-gray-600">Total Lotes</p>
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-4 w-24" />
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center">
+                <LayoutGrid className="w-8 h-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {lots.length}
+                  </p>
+                  <p className="text-gray-600">Total Lotes</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-4 w-24" />
               </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {lots
-                    .reduce((sum, lot) => sum + lot.superficie_ha, 0)
-                    .toFixed(1)}
-                </p>
-                <p className="text-gray-600">Hectáreas Cultivadas</p>
+            ) : (
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {lots
+                      .reduce((sum, lot) => sum + (lot.area || 0), 0)
+                      .toFixed(1)}
+                  </p>
+                  <p className="text-gray-600">Hectáreas Cultivadas</p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-yellow-600 rounded-full"></div>
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="h-4 w-24" />
               </div>
-              <div className="ml-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {(
-                    (lots.reduce((sum, lot) => sum + lot.superficie_ha, 0) /
-                      field.superficie_ha) *
-                    100
-                  ).toFixed(1)}
-                  %
-                </p>
-                <p className="text-gray-600">Utilización</p>
+            ) : (
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <div className="w-4 h-4 bg-yellow-600 rounded-full"></div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {field?.superficie_ha
+                      ? (
+                          (lots.reduce((sum, lot) => sum + (lot.area || 0), 0) /
+                            field.superficie_ha) *
+                          100
+                        ).toFixed(1)
+                      : "0"}
+                    %
+                  </p>
+                  <p className="text-gray-600">Utilización</p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -686,63 +777,88 @@ function FieldLotsView({
           </Button>
         </div>
 
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+          >
+            Tabla
+          </Button>
+          <Button
+            variant={viewMode === "cards" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("cards")}
+          >
+            Tarjetas
+          </Button>
+        </div>
       </div>
 
       {viewMode === "cards" ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {lots.map((lot) => (
-            <Card
-              key={lot.id_lote}
-              className="hover:shadow-lg transition-shadow"
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle className="text-lg">{lot.nombre}</CardTitle>
-                  <p className="text-sm text-gray-500">
-                    LOT-{lot.id_lote.toString().padStart(3, "0")}
-                  </p>
-                </div>
-                <LayoutGrid className="w-5 h-5 text-blue-600" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Superficie:</span>
-                    <span className="font-medium">{lot.superficie_ha} ha</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Cultivo:</span>
-                    <span className="font-medium text-green-600">
-                      {lot.cultivo}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Estadio:</span>
-                    <span className="font-medium text-blue-600">
-                      {lot.estadio}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Coordenadas:</span>
-                    <span className="font-medium text-xs">
-                      {lot.latitud.toFixed(4)}, {lot.longitud.toFixed(4)}
-                    </span>
-                  </div>
-                </div>
+          {loading
+            ? Array.from({ length: 3 }).map((_, idx) => (
+                <Card key={`skeleton-card-${idx}`}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div className="flex-1">
+                      <Skeleton className="h-5 w-24 mb-2" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-5 w-5 rounded" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                      <Skeleton className="h-4 w-4/5" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ))
+            : lots.map((lot: any) => (
+                <Card
+                  key={lot.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div>
+                      <CardTitle className="text-lg">{lot.name}</CardTitle>
+                      <p className="text-sm text-gray-500">
+                        LOT-{lot.id.toString().padStart(3, "0")}
+                      </p>
+                    </div>
+                    <LayoutGrid className="w-5 h-5 text-blue-600" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Superficie:</span>
+                        <span className="font-medium">{lot.area} ha</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Coordenadas:</span>
+                        <span className="font-medium text-xs">
+                          {lot.lat?.toFixed(4) || "-"},{" "}
+                          {lot.long?.toFixed(4) || "-"}
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="flex space-x-2">
-                  <TableActions
-                    onView={() => handleViewLot(lot.id_lote)}
-                    onEdit={() => handleEditLot(lot.id_lote)}
-                    onDelete={() => handleDeleteLot(lot.id_lote)}
-                    viewLabel="Ver Detalles"
-                    forceDropdown={true}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <div className="flex space-x-2">
+                      <TableActions
+                        onView={() => handleViewLot(lot.id)}
+                        onEdit={() => handleEditLot(lot.id)}
+                        onDelete={() => handleDeleteLot(lot.id)}
+                        viewLabel="Ver Detalles"
+                        forceDropdown={true}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
         </div>
       ) : (
         <Card>
@@ -758,12 +874,6 @@ function FieldLotsView({
                       Superficie (ha)
                     </th>
                     <th className="text-left p-4 font-medium text-gray-900">
-                      Cultivo
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
-                      Estadio
-                    </th>
-                    <th className="text-left p-4 font-medium text-gray-900">
                       Coordenadas
                     </th>
                     <th className="text-left p-4 font-medium text-gray-900">
@@ -772,40 +882,61 @@ function FieldLotsView({
                   </tr>
                 </thead>
                 <tbody>
-                  {lots.map((lot) => (
-                    <tr key={lot.id_lote} className="border-b hover:bg-gray-50">
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {lot.nombre}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            LOT-{lot.id_lote.toString().padStart(3, "0")}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {lot.superficie_ha} ha
-                      </td>
-                      <td className="p-4 text-sm text-green-600">
-                        {lot.cultivo}
-                      </td>
-                      <td className="p-4 text-sm text-blue-600">
-                        {lot.estadio}
-                      </td>
-                      <td className="p-4 text-sm text-gray-900">
-                        {lot.latitud.toFixed(4)}, {lot.longitud.toFixed(4)}
-                      </td>
-                      <td className="p-4">
-                        <TableActions
-                          onView={() => handleViewLot(lot.id_lote)}
-                          onEdit={() => handleEditLot(lot.id_lote)}
-                          onDelete={() => handleDeleteLot(lot.id_lote)}
-                          viewLabel="Ver Detalles"
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                  {loading
+                    ? Array.from({ length: 4 }).map((_, idx) => (
+                        <tr key={`skeleton-${idx}`} className="border-b">
+                          <td className="p-4">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-12" />
+                          </td>
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-20" />
+                          </td>
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-24" />
+                          </td>
+                          <td className="p-4">
+                            <Skeleton className="h-4 w-32" />
+                          </td>
+                          <td className="p-4">
+                            <Skeleton className="h-8 w-20" />
+                          </td>
+                        </tr>
+                      ))
+                    : lots.map((lot: any) => (
+                        <tr key={lot.id} className="border-b hover:bg-gray-50">
+                          <td className="p-4">
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {lot.name}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                LOT-{lot.id.toString().padStart(3, "0")}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-gray-900">
+                            {lot.area} ha
+                          </td>
+                          <td className="p-4 text-sm text-gray-900">
+                            {lot.lat?.toFixed(4) || "-"},{" "}
+                            {lot.long?.toFixed(4) || "-"}
+                          </td>
+                          <td className="p-4">
+                            <TableActions
+                              onView={() => handleViewLot(lot.id)}
+                              onEdit={() => handleEditLot(lot.id)}
+                              onDelete={() => handleDeleteLot(lot.id)}
+                              viewLabel="Ver Detalles"
+                            />
+                          </td>
+                        </tr>
+                      ))}
                 </tbody>
               </table>
             </div>
@@ -817,7 +948,7 @@ function FieldLotsView({
         isOpen={isCreateLotModalOpen}
         onClose={() => setIsCreateLotModalOpen(false)}
         fieldId={fieldId}
-        fieldName={field.nombre}
+        fieldName={field?.nombre || "Campo"}
         clientName={clientName}
       />
 
@@ -828,7 +959,7 @@ function FieldLotsView({
           setEditLot(null);
         }}
         lot={editLot}
-        fieldName={field.nombre}
+        fieldName={field?.nombre || "Campo"}
         clientName={clientName}
       />
 

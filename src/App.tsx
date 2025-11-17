@@ -8,22 +8,47 @@ import { Clients } from "./pages/Clients";
 import { LotDetail } from "./pages/LotDetail";
 import { CreateWorkOrder } from "./pages/CreateWorkOrder";
 import { WorkOrderDetail } from "./pages/WorkOrderDetail";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
 function App() {
   return (
-    <>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/work-orders" element={<WorkOrders />} />
-          <Route path="/work-orders/:id" element={<WorkOrderDetail />} />
-          <Route path="/work-orders/new" element={<CreateWorkOrder />} />
-          <Route path="/machinery" element={<Machinery />} />
-          <Route path="/machinery/:id" element={<MachineryDetail />} />
-          <Route path="/lots/:id" element={<LotDetail />} />
-          <Route path="/clients" element={<Clients />} />
-        </Routes>
-      </Layout>
-    </>
+    <AuthProvider>
+      <Routes>
+        {/* Rutas públicas */}
+        <Route path="/login" element={<Login onLogin={() => {}} />} />
+        <Route path="/signup" element={<SignUp />} />
+
+        {/* Rutas privadas CON Layout */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/work-orders" element={<WorkOrders />} />
+                  <Route
+                    path="/work-orders/:id"
+                    element={<WorkOrderDetail />}
+                  />
+                  <Route
+                    path="/work-orders/new"
+                    element={<CreateWorkOrder />}
+                  />
+                  <Route path="/machinery" element={<Machinery />} />
+                  <Route path="/machinery/:id" element={<MachineryDetail />} />
+                  <Route path="/lots/:id" element={<LotDetail />} />
+                  <Route path="/clients" element={<Clients />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }
 

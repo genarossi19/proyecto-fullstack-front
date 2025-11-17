@@ -81,10 +81,33 @@ export function Sidebar() {
   };
 
   const isActivePath = (path: string) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/" || location.pathname === "/dashboard";
+    const currentPath = location.pathname;
+
+    // Dashboard
+    if (path === "/" && (currentPath === "/" || currentPath === "/dashboard")) {
+      return true;
     }
-    return location.pathname.startsWith(path);
+
+    // Work orders
+    if (path === "/work-orders" && currentPath.startsWith("/work-orders")) {
+      return true;
+    }
+
+    // Machinery
+    if (path === "/machinery" && currentPath.startsWith("/machinery")) {
+      return true;
+    }
+
+    // Clients - incluye lot-detail y cualquier ruta relacionada
+    if (path === "/clients") {
+      return (
+        currentPath.startsWith("/clients") ||
+        currentPath.includes("lot-detail") ||
+        currentPath.startsWith("/lot-detail")
+      );
+    }
+
+    return false;
   };
 
   return (

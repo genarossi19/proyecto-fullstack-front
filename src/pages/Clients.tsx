@@ -45,14 +45,19 @@ export function Clients() {
   const [editingClient, setEditingClient] = useState<ClientType | null>(null);
   const [clients, setClients] = useState<ClientType[]>([]);
   const [isDeletingClient, setIsDeletingClient] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetClients = async () => {
       try {
+        setLoading(true);
         const response = await getAllClients();
         setClients(response);
       } catch (error) {
         console.error("Error fetching clients:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -192,64 +197,104 @@ export function Clients() {
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client) => (
-                  <tr
-                    key={client.id}
-                    className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handleViewClient(client.id)}
-                  >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {client.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          CLI-{client.id.toString().padStart(3, "0")}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-gray-900">{client.cuit}</td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {client.phone}
-                    </td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {client.email}
-                    </td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {client.address}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          client.active
-                            ? "bg-green-100 text-green-600"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                {loading
+                  ? Array.from({ length: 5 }).map((_, idx) => (
+                      <tr key={`skeleton-${idx}`} className="border-b">
+                        <td className="p-4">
+                          <div className="space-y-2">
+                            <Skeleton className="h-5 w-32" />
+                            <Skeleton className="h-3 w-20" />
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-24" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-24" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-32" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-40" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-6 w-16" />
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-8 w-20" />
+                            <Skeleton className="h-8 w-20" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  : clients.map((client) => (
+                      <tr
+                        key={client.id}
+                        className="border-b hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleViewClient(client.id)}
                       >
-                        {client.active ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center space-x-2">
-                        <TableActions
-                          onView={() => handleViewClient(client.id)}
-                          onEdit={() => handleEditClient(client)}
-                          onDelete={() => handleDeleteClient(client.id)}
-                        />
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {client.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              CLI-{client.id.toString().padStart(3, "0")}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {client.cuit}
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {client.phone}
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {client.email}
+                        </td>
+                        <td className="p-4 text-sm text-gray-900">
+                          {client.address}
+                        </td>
+
+                        <td className="p-4">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              client.active
+                                ? "bg-green-100 text-green-600"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {client.active ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td
+                          className="p-4"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          Orden
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <div className="flex items-center space-x-2">
+                            <TableActions
+                              onView={() => handleViewClient(client.id)}
+                              onEdit={() => handleEditClient(client)}
+                              onDelete={() => handleDeleteClient(client.id)}
+                            />
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate("/work-orders/new", {
+                                  state: { clientId: client.id },
+                                });
+                              }}
+                            >
+                              Orden
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>
@@ -955,7 +1000,7 @@ function FieldLotsView({
                       .reduce((sum, lot) => sum + (lot.area || 0), 0)
                       .toFixed(1)}
                   </p>
-                  <p className="text-gray-600">Hectáreas Cultivadas</p>
+                  <p className="text-gray-600">Hectáreas Totales</p>
                 </div>
               </div>
             )}

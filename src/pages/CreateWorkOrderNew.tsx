@@ -12,7 +12,8 @@ import {
 import { CreateClientModal } from "../components/CreateClientModal";
 import { CreateFieldModal } from "../components/CreateFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
-import { useNavigate } from "react-router";
+import { CreateMachineryModal } from "../components/CreateMachineryModal";
+import { useNavigate, useLocation } from "react-router";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import {
@@ -25,9 +26,9 @@ import {
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 import { getAllClients } from "../api/services/ClientService";
-import { getAllFields } from "../api/services/FieldService";
-import { getAllLots } from "../api/services/LotService";
+import { getAllFields, getFieldById } from "../api/services/FieldService";
 import { createWorkOrder } from "../api/services/WorkOrderService";
+import { getAllMachineries } from "../api/services/MachineryService";
 import type { ClientType } from "../types/ClientType";
 
 interface DetailLote {
@@ -41,9 +42,12 @@ interface DetailMachinery {
 
 export function CreateWorkOrderNew() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedClientId = (location.state as { clientId?: number })
+    ?.clientId;
 
   const [formData, setFormData] = useState({
-    clientId: null as number | null,
+    clientId: preselectedClientId || (null as number | null),
     fieldId: null as number | null,
     serviceId: null as number | null,
     init_date: new Date().toISOString().split("T")[0],
@@ -60,15 +64,20 @@ export function CreateWorkOrderNew() {
   const [selectedLotForAdd, setSelectedLotForAdd] = useState<number | null>(
     null
   );
+  const [showLotSelector, setShowLotSelector] = useState(false);
+  const [showMachinerySelectors, setShowMachinerySelectors] = useState(false);
 
   const [clients, setClients] = useState<ClientType[]>([]);
   const [fields, setFields] = useState<any[]>([]);
   const [lots, setLots] = useState<any[]>([]);
+  const [machineries, setMachineries] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
   const [isCreateFieldModalOpen, setIsCreateFieldModalOpen] = useState(false);
   const [isCreateLotModalOpen, setIsCreateLotModalOpen] = useState(false);
+  const [isCreateMachineryModalOpen, setIsCreateMachineryModalOpen] =
+    useState(false);
 
   const WORK_ORDER_STATUS = [
     "Pendiente",
@@ -77,21 +86,25 @@ export function CreateWorkOrderNew() {
     "Cancelado",
   ];
 
-  // Cargar clientes
+  // Cargar clientes y maquinaria
   useEffect(() => {
-    const loadClients = async () => {
+    const loadData = async () => {
       try {
-        const data = await getAllClients();
-        setClients(data);
+        const [clientsData, machineriesData] = await Promise.all([
+          getAllClients(),
+          getAllMachineries(),
+        ]);
+        setClients(clientsData);
+        setMachineries(machineriesData);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        toast.error("Error al cargar clientes", {
+        toast.error("Error al cargar datos", {
           description: errorMessage,
         });
       }
     };
-    loadClients();
+    loadData();
   }, []);
 
   // Cargar campos cuando cambia el cliente
@@ -135,11 +148,8 @@ export function CreateWorkOrderNew() {
 
     const loadLots = async () => {
       try {
-        const allLots = await getAllLots();
-        const filtered = allLots.filter(
-          (l: any) => l.fieldId === formData.fieldId
-        );
-        setLots(filtered);
+        const fieldData = await getFieldById(formData.fieldId as number);
+        setLots(fieldData?.lots || []);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -187,11 +197,8 @@ export function CreateWorkOrderNew() {
 
   const handleLotCreated = async () => {
     try {
-      const allLots = await getAllLots();
-      const filtered = allLots.filter(
-        (l: any) => l.fieldId === formData.fieldId
-      );
-      setLots(filtered);
+      const fieldData = await getFieldById(formData.fieldId || 0);
+      setLots(fieldData?.lots || []);
       setIsCreateLotModalOpen(false);
       toast.success("Lote creado exitosamente");
     } catch (error) {
@@ -203,34 +210,23 @@ export function CreateWorkOrderNew() {
     }
   };
 
-  const addDetalleLote = () => {
-    if (!selectedLotForAdd) {
-      toast.error("Selecciona un lote");
-      return;
+  const handleMachineryCreated = async () => {
+    try {
+      const data = await getAllMachineries();
+      setMachineries(data);
+      setIsCreateMachineryModalOpen(false);
+      toast.success("Maquinaria creada exitosamente");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error("Error al recargar maquinaria", {
+        description: errorMessage,
+      });
     }
-
-    const selectedLot = lots.find((l: any) => l.id === selectedLotForAdd);
-    if (!selectedLot) {
-      toast.error("Lote no encontrado");
-      return;
-    }
-
-    const newDetalle: DetailLote = {
-      lotId: selectedLot.id,
-      lotName: selectedLot.name,
-    };
-
-    setDetalleLotes([...detalleLotes, newDetalle]);
-    setSelectedLotForAdd(null);
-    toast.success("Lote agregado");
   };
 
   const removeDetalleLote = (index: number) => {
     setDetalleLotes(detalleLotes.filter((_, i) => i !== index));
-  };
-
-  const addDetalleMaquinaria = () => {
-    setDetalleMaquinaria([...detalleMaquinaria, { machineryId: 0 }]);
   };
 
   const removeDetalleMaquinaria = (index: number) => {
@@ -535,62 +531,98 @@ export function CreateWorkOrderNew() {
         {/* Selección de Lotes */}
         <Card>
           <CardHeader className="border-b px-6 py-4">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Lotes <span className="text-red-500">*</span>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                Lotes <span className="text-red-500">*</span>
+              </CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCreateLotModalOpen(true)}
+                className="text-green-600 hover:bg-green-50"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Crear Lote
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="p-6 space-y-4">
-            {/* Selector de Lotes */}
+            {/* Selector de Lotes - Solo visible si hay campo y se habilita */}
             {formData.fieldId && lots.length > 0 && (
-              <div className="flex gap-3">
-                <Select
-                  value={selectedLotForAdd ? String(selectedLotForAdd) : ""}
-                  onValueChange={(v) => setSelectedLotForAdd(Number(v))}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Seleccionar lote a agregar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lots.map((lot: any) => (
-                      <SelectItem key={lot.id} value={String(lot.id)}>
-                        {lot.name} ({lot.area} ha)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addDetalleLote}
-                  className="border-green-600 text-green-600 hover:bg-green-50"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Agregar
-                </Button>
-              </div>
+              <>
+                {!showLotSelector ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                    onClick={() => setShowLotSelector(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Lote
+                  </Button>
+                ) : (
+                  <div className="flex gap-3">
+                    <Select
+                      value={selectedLotForAdd ? String(selectedLotForAdd) : ""}
+                      onValueChange={(v) => {
+                        const lotId = Number(v);
+                        setSelectedLotForAdd(lotId);
+                        const selectedLot = lots.find(
+                          (l: unknown) => (l as { id: number }).id === lotId
+                        );
+                        if (selectedLot) {
+                          const newDetalle: DetailLote = {
+                            lotId: (selectedLot as { id: number }).id,
+                            lotName: (selectedLot as { name: string }).name,
+                          };
+                          setDetalleLotes([...detalleLotes, newDetalle]);
+                          setSelectedLotForAdd(null);
+                          setShowLotSelector(false);
+                          toast.success("Lote agregado");
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Seleccionar lote" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lots.map((lot: unknown) => (
+                          <SelectItem
+                            key={(lot as { id: number }).id}
+                            value={String((lot as { id: number }).id)}
+                          >
+                            {(lot as { name: string }).name} (
+                            {(lot as { area: number }).area} ha)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowLotSelector(false)}
+                      className="text-gray-600 hover:bg-gray-100"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Botones para crear o seleccionar lotes */}
             {formData.fieldId && lots.length === 0 && (
-              <div className="text-center py-6">
-                <p className="text-gray-600 mb-3">
+              <div className="text-center py-4">
+                <p className="text-gray-600 text-sm mb-3">
                   No hay lotes disponibles en este campo
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsCreateLotModalOpen(true)}
-                  className="text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear Nuevo Lote
-                </Button>
               </div>
             )}
 
             {!formData.fieldId && (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-4 text-gray-500 text-sm">
                 Selecciona un campo primero
               </div>
             )}
@@ -629,27 +661,126 @@ export function CreateWorkOrderNew() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
 
-            {/* Botón para crear nuevo lote si hay campo seleccionado */}
-            {formData.fieldId && detalleLotes.length > 0 && lots.length > 0 && (
-              <div className="pt-2 border-t border-gray-200">
+        {/* Asignación de Maquinaria */}
+        <Card>
+          <CardHeader className="border-b px-6 py-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                Asignación de Maquinaria
+              </CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCreateMachineryModalOpen(true)}
+                className="text-green-600 hover:bg-green-50"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Crear Maquinaria
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-6 space-y-4">
+            {/* Botón para agregar selectores */}
+            {machineries.length > 0 && (
+              <>
+                {!showMachinerySelectors ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                    onClick={() => {
+                      setDetalleMaquinaria([
+                        ...detalleMaquinaria,
+                        { machineryId: 0 },
+                      ]);
+                      setShowMachinerySelectors(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Maquinaria
+                  </Button>
+                ) : null}
+              </>
+            )}
+
+            {/* Lista de Maquinaria Agregada */}
+            {detalleMaquinaria.length > 0 ? (
+              <div className="space-y-3">
+                {detalleMaquinaria.map((machinery, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                  >
+                    <Select
+                      value={
+                        machinery.machineryId
+                          ? String(machinery.machineryId)
+                          : ""
+                      }
+                      onValueChange={(v) =>
+                        updateDetalleMaquinaria(index, Number(v))
+                      }
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Seleccionar maquinaria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {machineries.map((m: unknown) => (
+                          <SelectItem
+                            key={(m as { id: number }).id}
+                            value={String((m as { id: number }).id)}
+                          >
+                            {(m as { name: string }).name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDetalleMaquinaria(index)}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Botón para agregar más maquinaria */}
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setIsCreateLotModalOpen(true)}
-                  className="text-green-600 hover:bg-green-50"
+                  className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                  onClick={() => {
+                    setDetalleMaquinaria([
+                      ...detalleMaquinaria,
+                      { machineryId: 0 },
+                    ]);
+                  }}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Crear Otro Lote
+                  Agregar Otra Maquinaria
                 </Button>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                {machineries.length === 0
+                  ? "No hay maquinaria disponible"
+                  : "Sin maquinaria asignada"}
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Botón Guardar */}
-        <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200">
+        <Card className="bg-linear-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -674,7 +805,7 @@ export function CreateWorkOrderNew() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                className="bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isSubmitting ? "Guardando..." : "Guardar Orden"}
@@ -705,6 +836,12 @@ export function CreateWorkOrderNew() {
         fieldId={formData.fieldId || 0}
         fieldName={selectedField?.name || ""}
         clientName={selectedClient?.name || ""}
+      />
+
+      <CreateMachineryModal
+        isOpen={isCreateMachineryModalOpen}
+        onClose={() => setIsCreateMachineryModalOpen(false)}
+        onMachineryCreated={handleMachineryCreated}
       />
     </div>
   );

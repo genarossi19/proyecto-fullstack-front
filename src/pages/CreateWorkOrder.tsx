@@ -24,6 +24,7 @@ import {
 import { CreateClientModal } from "../components/CreateClientModal";
 import { CreateFieldModal } from "../components/CreateFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
+import { getAllClients } from "../api/services/ClientService";
 import { Separator } from "@radix-ui/react-select";
 import { useNavigate } from "react-router";
 import { Label } from "../components/ui/label";
@@ -180,14 +181,21 @@ export function CreateWorkOrder() {
       budget.id_cliente.toString() === formData.id_cliente
   );
 
-  const handleClientCreated = (newClient: any) => {
-    const clientWithId = { ...newClient, id_cliente: clientes.length + 1 };
-    setClientes([...clientes, clientWithId]);
-    setFormData({
-      ...formData,
-      id_cliente: clientWithId.id_cliente.toString(),
-    });
-    setIsCreateClientModalOpen(false);
+  const handleClientCreated = async () => {
+    try {
+      // Recargar la lista de clientes desde la API
+      const response = await getAllClients();
+      setClientes(
+        response.map((client: any) => ({
+          id_cliente: client.id,
+          razon_social: client.name,
+        }))
+      );
+      // Cerrar el modal
+      setIsCreateClientModalOpen(false);
+    } catch (error) {
+      console.error("Error reloading clients:", error);
+    }
   };
 
   const handleFieldCreated = (newField: any) => {

@@ -11,11 +11,28 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "./ui/alert-dialog";
+import { Button } from "./ui/button";
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const menuItems = [
     {
@@ -42,19 +59,25 @@ export function Sidebar() {
   ];
 
   const generalItems = [
-    {
-      id: "settings",
-      label: "Configuración",
-      icon: Settings,
-      path: "/settings",
-    },
-    { id: "help", label: "Ayuda", icon: HelpCircle, path: "/help" },
     { id: "logout", label: "Cerrar Sesión", icon: LogOut, path: "#" },
   ];
 
   const handleLogout = () => {
-    console.log("Logging out...");
-    // Aquí puedes agregar la lógica de logout
+    // Abrir diálogo de confirmación
+    setOpenLogoutDialog(true);
+  };
+
+  const confirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login");
+    } catch (err) {
+      console.error("Error during logout:", err);
+    } finally {
+      setIsLoggingOut(false);
+      setOpenLogoutDialog(false);
+    }
   };
 
   const isActivePath = (path: string) => {
@@ -68,7 +91,7 @@ export function Sidebar() {
     <div
       className={`${
         isCollapsed ? "w-16" : "w-64"
-      } bg-gradient-to-b from-gray-50 to-gray-100 border-r border-gray-200 flex flex-col transition-all duration-300`}
+      } bg-linear-to-b from-gray-50 to-gray-100 border-r border-gray-200 flex flex-col transition-all duration-300`}
     >
       {/* Logo */}
       <div className={`${isCollapsed ? "p-4" : "p-6"} relative`}>
@@ -121,7 +144,7 @@ export function Sidebar() {
                   title={isCollapsed ? item.label : undefined}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-gradient rounded-r"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-gradient rounded-r-lg"></div>
                   )}
                   <Icon className="w-5 h-5" />
                   {!isCollapsed && (
@@ -148,19 +171,50 @@ export function Sidebar() {
 
               if (item.id === "logout") {
                 return (
-                  <button
-                    key={item.id}
-                    onClick={handleLogout}
-                    className={`w-full flex items-center ${
-                      isCollapsed ? "justify-center px-2" : "space-x-3 px-3"
-                    } py-2 text-left transition-all duration-200 relative rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white/70`}
-                    title={isCollapsed ? item.label : undefined}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {!isCollapsed && (
-                      <span className="font-medium">{item.label}</span>
-                    )}
-                  </button>
+                  <div key={item.id}>
+                    <AlertDialog
+                      open={openLogoutDialog}
+                      onOpenChange={setOpenLogoutDialog}
+                    >
+                      <AlertDialogTrigger asChild>
+                        <button
+                          onClick={handleLogout}
+                          className={`w-full flex items-center ${
+                            isCollapsed
+                              ? "justify-center px-2"
+                              : "space-x-3 px-3"
+                          } py-2 text-left transition-all duration-200 relative rounded-lg 
+     text-red-600 hover:text-red-900 hover:bg-red-100`}
+                          title={isCollapsed ? item.label : undefined}
+                        >
+                          <Icon className="w-5 h-5" />
+                          {!isCollapsed && (
+                            <span className="font-medium">{item.label}</span>
+                          )}
+                        </button>
+                      </AlertDialogTrigger>
+
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            ¿Seguro que desea cerrar sesión?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Se cerrará tu sesión actual y tendrás que iniciar
+                            sesión de nuevo.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel asChild>
+                            <Button variant="outline">Cancelar</Button>
+                          </AlertDialogCancel>
+                          <AlertDialogAction onClick={confirmLogout}>
+                            {isLoggingOut ? "Cerrando..." : "Cerrar sesión"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 );
               }
 
@@ -178,7 +232,7 @@ export function Sidebar() {
                   title={isCollapsed ? item.label : undefined}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-gradient rounded-r"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-gradient rounded-r-lg"></div>
                   )}
                   <Icon className="w-5 h-5" />
                   {!isCollapsed && (

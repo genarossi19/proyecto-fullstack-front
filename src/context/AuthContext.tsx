@@ -15,6 +15,7 @@ interface AuthContextType {
     password: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: UserType) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,7 +47,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setIsLoading(true);
     try {
       const response = await AuthService.login({ email, password });
-      setUser(response.user);
+      // El backend puede devolver { user: UserType } o el UserType directamente
+      const userFromResponse = (response as any)?.user ?? (response as any);
+      setUser(userFromResponse as UserType);
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         email,
         password,
       });
-      setUser(userData);
+      // Aceptar tanto { user: UserType } como UserType
+      const normalized = (userData as any)?.user ?? (userData as any);
+      setUser(normalized as UserType);
     } finally {
       setIsLoading(false);
     }
@@ -83,6 +88,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const updateUser = (updatedUser: UserType) => {
+    setUser(updatedUser);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -92,6 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         login,
         signup,
         logout,
+        updateUser,
       }}
     >
       {children}

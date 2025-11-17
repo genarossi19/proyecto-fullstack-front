@@ -36,8 +36,12 @@ export class AuthService {
 
   static async getCurrentUser(): Promise<UserType> {
     try {
-      const response = await api.get<{ user: UserType }>("/users/me");
-      return response.data.user;
+      const response = await api.get<any>("/users/me");
+      // Acepta tanto { user: UserType } como UserType directamente
+      if (response.data && response.data.user) {
+        return response.data.user as UserType;
+      }
+      return response.data as UserType;
     } catch (error) {
       throw error;
     }

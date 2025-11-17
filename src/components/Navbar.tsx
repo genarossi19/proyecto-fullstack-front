@@ -1,4 +1,4 @@
-import { Bell, Search, LogOut } from "lucide-react";
+import { Bell, Search, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { useAuth } from "../context/AuthContext";
@@ -30,19 +30,7 @@ const Navbar = () => {
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search task"
-              className="pl-10 pr-16 py-2 w-80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50 font-poppins"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium">
-              ⌘ F
-            </span>
-          </div>
-        </div>
+        <div className="flex items-center space-x-4"></div>
 
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="sm">
@@ -76,11 +64,23 @@ const Navbar = () => {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={handleLogout}
+                onClick={() => navigate("/profile")}
                 className="cursor-pointer"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                <span>Cerrar Sesión</span>
+                <User className="w-4 h-4 mr-2" />
+                <span>Mi Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer py-2 transition-all duration-200 
+             text-red-600 hover:bg-red-100 focus:bg-red-100"
+              >
+                <LogOut className="w-4 h-4 mr-2 text-red-600 group-hover:text-red-900" />
+
+                <span className="transition text-red-600 group-hover:text-red-900">
+                  Cerrar Sesión
+                </span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

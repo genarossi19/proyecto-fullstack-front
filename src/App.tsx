@@ -8,6 +8,8 @@ import { Clients } from "./pages/Clients";
 import { LotDetail } from "./pages/LotDetail";
 import { CreateWorkOrder } from "./pages/CreateWorkOrder";
 import { WorkOrderDetail } from "./pages/WorkOrderDetail";
+import { Profile } from "./pages/Profile";
+import { EditProfile } from "./pages/EditProfile";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import { AuthProvider } from "./context/AuthContext";
@@ -42,6 +44,8 @@ function App() {
                   <Route path="/machinery/:id" element={<MachineryDetail />} />
                   <Route path="/lots/:id" element={<LotDetail />} />
                   <Route path="/clients" element={<Clients />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/profile/edit" element={<EditProfile />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

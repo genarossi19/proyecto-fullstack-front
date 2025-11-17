@@ -19,10 +19,14 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog";
 import { useNavigate, useParams } from "react-router";
-import { getMachineryById } from "../api/services/MachineryService";
+import {
+  getMachineryById,
+  deleteMachinery,
+} from "../api/services/MachineryService";
 import type { MachineryType } from "../types/Machinery";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
+import { EditMachineryModal } from "../components/EditMachineryModal";
 
 export function MachineryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +34,8 @@ export function MachineryDetail() {
   const [machinery, setMachinery] = useState<MachineryType | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const machineryId = id ? parseInt(id, 10) : null;
 
@@ -67,14 +73,44 @@ export function MachineryDetail() {
 
   const handleEdit = () => {
     if (machinery) {
-      navigate(`/machinery/${machinery.id}/edit`);
+      setIsEditModalOpen(true);
     }
   };
 
-  const handleDelete = () => {
-    console.log("Deleting machinery:", machineryId);
-    setShowDeleteDialog(false);
-    onBack();
+  const handleMachineryUpdated = async () => {
+    try {
+      const data = await getMachineryById(machineryId!);
+      setMachinery(data);
+      setIsEditModalOpen(false);
+      toast.success("Maquinaria actualizada correctamente");
+    } catch (error) {
+      console.error("Error reloading machinery:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error("Error al actualizar la maquinaria", {
+        description: errorMessage,
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!machineryId) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteMachinery(machineryId);
+      toast.success("Maquinaria eliminada correctamente");
+      navigate(-1);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error("Error al eliminar la maquinaria", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -244,16 +280,29 @@ export function MachineryDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Eliminar
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Machinery Modal */}
+      {machinery && (
+        <EditMachineryModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          machinery={machinery}
+          onMachineryUpdated={handleMachineryUpdated}
+        />
+      )}
     </div>
   );
 }

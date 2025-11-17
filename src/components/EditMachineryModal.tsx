@@ -1,6 +1,6 @@
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -13,14 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { createMachinery } from "../api/services/MachineryService";
+import { updateMachinery } from "../api/services/MachineryService";
 import { toast } from "sonner";
+import type { MachineryType } from "../types/Machinery";
 import { MACHINERY_TYPES, MACHINERY_STATUS } from "../constants/machinery";
 
-interface CreateMachineryModalProps {
+interface EditMachineryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onMachineryCreated?: () => void;
+  machinery: MachineryType | null;
+  onMachineryUpdated?: () => void;
 }
 
 interface FormErrors {
@@ -31,11 +33,12 @@ interface FormErrors {
   status?: string;
 }
 
-export function CreateMachineryModal({
+export function EditMachineryModal({
   isOpen,
   onClose,
-  onMachineryCreated,
-}: CreateMachineryModalProps) {
+  machinery,
+  onMachineryUpdated,
+}: EditMachineryModalProps) {
   const [formData, setFormData] = useState<{
     name: string;
     type: string;
@@ -54,6 +57,20 @@ export function CreateMachineryModal({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (machinery && isOpen) {
+      setFormData({
+        name: machinery.name,
+        type: machinery.type,
+        brand: machinery.brand,
+        model: machinery.model,
+        patent: machinery.patent || "",
+        status: machinery.status,
+      });
+      setErrors({});
+    }
+  }, [machinery, isOpen]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -96,14 +113,15 @@ export function CreateMachineryModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateForm() || !machinery) {
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      await createMachinery({
+      await updateMachinery(machinery.id, {
+        id: machinery.id,
         name: formData.name.trim(),
         type: formData.type.trim(),
         brand: formData.brand.trim(),
@@ -112,30 +130,18 @@ export function CreateMachineryModal({
         status: formData.status,
       });
 
-      toast.success("Maquinaria creada exitosamente");
+      toast.success("Maquinaria actualizada exitosamente");
 
-      // Reset form
-      setFormData({
-        name: "",
-        type: "",
-        brand: "",
-        model: "",
-        patent: "",
-        status: "Disponible",
-      });
-      setErrors({});
-
-      // Call callback if provided
-      if (onMachineryCreated) {
-        onMachineryCreated();
+      if (onMachineryUpdated) {
+        onMachineryUpdated();
       }
 
       onClose();
     } catch (error) {
-      console.error("Error creating machinery:", error);
+      console.error("Error updating machinery:", error);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      toast.error("Error al crear la maquinaria", {
+      toast.error("Error al actualizar la maquinaria", {
         description: errorMessage,
       });
     } finally {
@@ -143,14 +149,14 @@ export function CreateMachineryModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !machinery) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm bg-black/50">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-visible">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-xl font-semibold">
-            Nueva Maquinaria
+            Editar Maquinaria
           </CardTitle>
           <Button
             variant="ghost"
@@ -334,9 +340,9 @@ export function CreateMachineryModal({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                {isSubmitting ? "Creando..." : "Crear Maquinaria"}
+                {isSubmitting ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </div>
           </form>

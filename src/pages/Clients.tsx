@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { CreateClientModal } from "../components/CreateClientModal";
+import { EditClientModal } from "../components/EditClientModal";
 import { TableActions } from "../components/ui/table-actions";
 import {
   AlertDialog,
@@ -26,16 +27,24 @@ import { EditFieldModal } from "../components/EditFieldModal";
 import { CreateLotModal } from "../components/CreateLotModal";
 import { EditLotModal } from "../components/EditLotModal";
 import type { ClientType } from "../types/ClientType";
-import { getAllClients, getClientbyId } from "../api/services/ClientService";
-import { getFieldById } from "../api/services/FieldService";
+import {
+  getAllClients,
+  getClientbyId,
+  deleteClient,
+} from "../api/services/ClientService";
+import { getFieldById, deleteField } from "../api/services/FieldService";
+import { deleteLot } from "../api/services/LotService";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
 
 export function Clients() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [editingClient, setEditingClient] = useState<ClientType | null>(null);
   const [clients, setClients] = useState<ClientType[]>([]);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
 
   useEffect(() => {
     const fetClients = async () => {
@@ -43,29 +52,62 @@ export function Clients() {
         const response = await getAllClients();
         setClients(response);
       } catch (error) {
-        console.error("Error fetching machineries:", error);
+        console.error("Error fetching clients:", error);
       }
     };
 
     fetClients();
   }, []);
 
+  const handleClientCreated = async () => {
+    try {
+      const response = await getAllClients();
+      setClients(response);
+    } catch (error) {
+      console.error("Error reloading clients:", error);
+    }
+  };
+
   const handleViewClient = (id: number) => {
     setSelectedClientId(id);
   };
 
-  const handleEditClient = (id: number) => {
-    console.log("Editing client:", id);
+  const handleEditClient = (client: ClientType) => {
+    setEditingClient(client);
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteClient = (id: number) => {
     setDeleteClientId(id);
   };
 
-  const confirmDelete = () => {
-    if (deleteClientId) {
-      console.log("Deleting client:", deleteClientId);
+  const confirmDelete = async () => {
+    if (!deleteClientId) return;
+
+    try {
+      setIsDeletingClient(true);
+      await deleteClient(deleteClientId);
+      toast.success("Cliente eliminado exitosamente");
+
+      // Recargar lista de clientes
+      const response = await getAllClients();
+      setClients(response);
+
       setDeleteClientId(null);
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Error al eliminar el cliente");
+    } finally {
+      setIsDeletingClient(false);
+    }
+  };
+
+  const handleClientUpdated = async () => {
+    try {
+      const response = await getAllClients();
+      setClients(response);
+    } catch (error) {
+      console.error("Error reloading clients:", error);
     }
   };
 
@@ -192,7 +234,7 @@ export function Clients() {
                       <div className="flex items-center space-x-2">
                         <TableActions
                           onView={() => handleViewClient(client.id)}
-                          onEdit={() => handleEditClient(client.id)}
+                          onEdit={() => handleEditClient(client)}
                           onDelete={() => handleDeleteClient(client.id)}
                         />
                         <Button
@@ -217,6 +259,17 @@ export function Clients() {
       <CreateClientModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onClientCreated={handleClientCreated}
+      />
+
+      <EditClientModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingClient(null);
+        }}
+        onClientUpdated={handleClientUpdated}
+        client={editingClient}
       />
 
       <AlertDialog
@@ -232,12 +285,15 @@ export function Clients() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingClient}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={isDeletingClient}
               className="bg-red-600 hover:bg-red-700"
             >
-              Eliminar
+              {isDeletingClient ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -255,11 +311,16 @@ function ClientFieldsView({
 }) {
   const [isCreateFieldModalOpen, setIsCreateFieldModalOpen] = useState(false);
   const [deleteFieldId, setDeleteFieldId] = useState<number | null>(null);
+  const [isDeletingField, setIsDeletingField] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
   const [selectedField, setSelectedField] = useState<any>(null);
   const [editField, setEditField] = useState<any>(null);
   const [isEditFieldModalOpen, setIsEditFieldModalOpen] = useState(false);
-  const [client, setClient] = useState<any>(null);
+  const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
+  const [isDeleteClientDialogOpen, setIsDeleteClientDialogOpen] =
+    useState(false);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
+  const [client, setClient] = useState<ClientType | null>(null);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -304,16 +365,88 @@ function ClientFieldsView({
     setDeleteFieldId(fieldId);
   };
 
-  const confirmDeleteField = () => {
-    if (deleteFieldId) {
-      console.log("Deleting field:", deleteFieldId);
+  const confirmDeleteField = async () => {
+    if (!deleteFieldId) return;
+
+    try {
+      setIsDeletingField(true);
+      await deleteField(deleteFieldId);
+      toast.success("Campo eliminado exitosamente");
+
+      // Recargar datos del cliente
+      const clientData = await getClientbyId(clientId);
+      setClient(clientData);
+      setFields(clientData.fields || []);
+
       setDeleteFieldId(null);
+    } catch (error) {
+      console.error("Error deleting field:", error);
+      toast.error("Error al eliminar el campo");
+    } finally {
+      setIsDeletingField(false);
+    }
+  };
+
+  const handleFieldCreated = async () => {
+    try {
+      const clientData = await getClientbyId(clientId);
+      setClient(clientData);
+      setFields(clientData.fields || []);
+      toast.success("Campo creado exitosamente");
+    } catch (error) {
+      console.error("Error reloading fields:", error);
+    }
+  };
+
+  const handleFieldUpdated = async () => {
+    try {
+      const clientData = await getClientbyId(clientId);
+      setClient(clientData);
+      setFields(clientData.fields || []);
+      toast.success("Campo actualizado exitosamente");
+    } catch (error) {
+      console.error("Error reloading fields:", error);
     }
   };
 
   const handleBackToFields = () => {
     setSelectedFieldId(null);
     setSelectedField(null);
+  };
+
+  const handleEditClient = () => {
+    setIsEditClientModalOpen(true);
+  };
+
+  const handleDeleteClient = () => {
+    setIsDeleteClientDialogOpen(true);
+  };
+
+  const confirmDeleteClient = async () => {
+    try {
+      setIsDeletingClient(true);
+      await deleteClient(clientId);
+      toast.success("Cliente eliminado exitosamente");
+      onBack();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Error al eliminar el cliente");
+    } finally {
+      setIsDeletingClient(false);
+      setIsDeleteClientDialogOpen(false);
+    }
+  };
+
+  const handleClientUpdated = async () => {
+    try {
+      const clientData = await getClientbyId(clientId);
+      setClient(clientData);
+      setFields(clientData.fields || []);
+      toast.success("Cliente actualizado exitosamente");
+    } catch (error) {
+      console.error("Error reloading client:", error);
+      toast.error("Error al actualizar los datos del cliente");
+    }
   };
 
   // Show field lots view when a field is selected
@@ -344,13 +477,29 @@ function ClientFieldsView({
             </p>
           </div>
         </div>
-        <Button
-          className="bg-green-600 hover:bg-green-700"
-          onClick={() => setIsCreateFieldModalOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Campo
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleEditClient}
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+          >
+            Editar Cliente
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDeleteClient}
+            className="text-red-600 border-red-600 hover:bg-red-50"
+          >
+            Eliminar Cliente
+          </Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700"
+            onClick={() => setIsCreateFieldModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo Campo
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -510,7 +659,11 @@ function ClientFieldsView({
                       </tr>
                     ))
                   : fields?.map((field: any) => (
-                      <tr key={field.id} className="border-b hover:bg-gray-50">
+                      <tr
+                        key={field.id}
+                        className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => handleViewField(field.id)}
+                      >
                         <td className="p-4">
                           <div>
                             <p className="font-medium text-gray-900">
@@ -554,17 +707,21 @@ function ClientFieldsView({
         onClose={() => setIsCreateFieldModalOpen(false)}
         clientId={clientId}
         clientName={client?.name || "Cliente"}
+        onFieldCreated={handleFieldCreated}
       />
 
-      <EditFieldModal
-        isOpen={isEditFieldModalOpen}
-        onClose={() => {
-          setIsEditFieldModalOpen(false);
-          setEditField(null);
-        }}
-        field={editField}
-        clientName={client?.name || "Cliente"}
-      />
+      {editField && (
+        <EditFieldModal
+          isOpen={isEditFieldModalOpen}
+          onClose={() => {
+            setIsEditFieldModalOpen(false);
+            setEditField(null);
+          }}
+          field={editField}
+          clientName={client?.name || "Cliente"}
+          onFieldUpdated={handleFieldUpdated}
+        />
+      )}
 
       <AlertDialog
         open={deleteFieldId !== null}
@@ -579,12 +736,51 @@ function ClientFieldsView({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingField}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteField}
+              disabled={isDeletingField}
               className="bg-red-600 hover:bg-red-700"
             >
-              Eliminar
+              {isDeletingField ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {client && (
+        <EditClientModal
+          isOpen={isEditClientModalOpen}
+          onClose={() => setIsEditClientModalOpen(false)}
+          client={client}
+          onClientUpdated={handleClientUpdated}
+        />
+      )}
+
+      <AlertDialog
+        open={isDeleteClientDialogOpen}
+        onOpenChange={setIsDeleteClientDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El cliente y todos sus campos y
+              lotes serán eliminados permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingClient}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteClient}
+              disabled={isDeletingClient}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeletingClient ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -610,6 +806,7 @@ function FieldLotsView({
   const [lots, setLots] = useState<any[]>([]);
   const [isCreateLotModalOpen, setIsCreateLotModalOpen] = useState(false);
   const [deleteLotId, setDeleteLotId] = useState<number | null>(null);
+  const [isDeletingLot, setIsDeletingLot] = useState(false);
   const [editLot, setEditLot] = useState<any>(null);
   const [isEditLotModalOpen, setIsEditLotModalOpen] = useState(false);
 
@@ -653,10 +850,44 @@ function FieldLotsView({
     setDeleteLotId(lotId);
   };
 
-  const confirmDeleteLot = () => {
-    if (deleteLotId) {
-      console.log("Deleting lot:", deleteLotId);
+  const confirmDeleteLot = async () => {
+    if (!deleteLotId) return;
+
+    try {
+      setIsDeletingLot(true);
+      await deleteLot(deleteLotId);
+      toast.success("Lote eliminado exitosamente");
+
+      // Recargar lotes del campo
+      const fieldWithLots = await getFieldById(fieldId);
+      setLots(fieldWithLots?.lots || []);
+
       setDeleteLotId(null);
+    } catch (error) {
+      console.error("Error deleting lot:", error);
+      toast.error("Error al eliminar el lote");
+    } finally {
+      setIsDeletingLot(false);
+    }
+  };
+
+  const handleLotCreated = async () => {
+    try {
+      const fieldWithLots = await getFieldById(fieldId);
+      setLots(fieldWithLots?.lots || []);
+      toast.success("Lote creado exitosamente");
+    } catch (error) {
+      console.error("Error reloading lots:", error);
+    }
+  };
+
+  const handleLotUpdated = async () => {
+    try {
+      const fieldWithLots = await getFieldById(fieldId);
+      setLots(fieldWithLots?.lots || []);
+      toast.success("Lote actualizado exitosamente");
+    } catch (error) {
+      console.error("Error reloading lots:", error);
     }
   };
 
@@ -909,7 +1140,11 @@ function FieldLotsView({
                         </tr>
                       ))
                     : lots.map((lot: any) => (
-                        <tr key={lot.id} className="border-b hover:bg-gray-50">
+                        <tr
+                          key={lot.id}
+                          className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => handleViewLot(lot.id)}
+                        >
                           <td className="p-4">
                             <div>
                               <p className="font-medium text-gray-900">
@@ -950,6 +1185,7 @@ function FieldLotsView({
         fieldId={fieldId}
         fieldName={field?.nombre || "Campo"}
         clientName={clientName}
+        onLotCreated={handleLotCreated}
       />
 
       <EditLotModal
@@ -961,6 +1197,7 @@ function FieldLotsView({
         lot={editLot}
         fieldName={field?.nombre || "Campo"}
         clientName={clientName}
+        onLotUpdated={handleLotUpdated}
       />
 
       <AlertDialog
@@ -976,12 +1213,15 @@ function FieldLotsView({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingLot}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteLot}
+              disabled={isDeletingLot}
               className="bg-red-600 hover:bg-red-700"
             >
-              Eliminar
+              {isDeletingLot ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

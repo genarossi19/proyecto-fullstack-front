@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { X } from "lucide-react";
+import { createLot } from "../api/services/LotService";
+import { toast } from "sonner";
 
 interface CreateLotModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface CreateLotModalProps {
   fieldId: number;
   fieldName: string;
   clientName: string;
+  onLotCreated?: () => void;
 }
 
 export function CreateLotModal({
@@ -19,40 +22,31 @@ export function CreateLotModal({
   fieldId,
   fieldName,
   clientName,
+  onLotCreated,
 }: CreateLotModalProps) {
   const [formData, setFormData] = useState({
-    nombre: "",
-    superficie_ha: "",
-    id_cultivo: "",
-    id_estadio: "",
-    latitud: "",
-    longitud: "",
+    name: "",
+    area: "",
+    lat: "",
+    long: "",
+    active: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const cultivosOptions = [
-    { id: 1, nombre: "Soja" },
-    { id: 2, nombre: "Maíz" },
-    { id: 3, nombre: "Trigo" },
-    { id: 4, nombre: "Girasol" },
-    { id: 5, nombre: "Sorgo" },
-  ];
-
-  const estadiosOptions = [
-    { id: 1, nombre: "Siembra" },
-    { id: 2, nombre: "Emergencia" },
-    { id: 3, nombre: "Vegetativo" },
-    { id: 4, nombre: "Floración" },
-    { id: 5, nombre: "Llenado" },
-    { id: 6, nombre: "Madurez" },
-  ];
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement;
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -61,69 +55,79 @@ export function CreateLotModal({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre del lote es requerido";
+    if (!formData.name.trim()) {
+      newErrors.name = "El nombre del lote es requerido";
     }
 
-    if (!formData.superficie_ha) {
-      newErrors.superficie_ha = "La superficie es requerida";
-    } else if (Number.parseFloat(formData.superficie_ha) <= 0) {
-      newErrors.superficie_ha = "La superficie debe ser mayor a 0";
+    if (!formData.area) {
+      newErrors.area = "La superficie es requerida";
+    } else if (Number.parseFloat(formData.area) <= 0) {
+      newErrors.area = "La superficie debe ser mayor a 0";
     }
 
-    if (!formData.id_cultivo) {
-      newErrors.id_cultivo = "El cultivo es requerido";
+    if (!formData.lat) {
+      newErrors.lat = "La latitud es requerida";
+    } else if (isNaN(Number.parseFloat(formData.lat))) {
+      newErrors.lat = "La latitud debe ser un número válido";
     }
 
-    if (!formData.id_estadio) {
-      newErrors.id_estadio = "El estadio es requerido";
-    }
-
-    if (!formData.latitud) {
-      newErrors.latitud = "La latitud es requerida";
-    } else if (isNaN(Number.parseFloat(formData.latitud))) {
-      newErrors.latitud = "La latitud debe ser un número válido";
-    }
-
-    if (!formData.longitud) {
-      newErrors.longitud = "La longitud es requerida";
-    } else if (isNaN(Number.parseFloat(formData.longitud))) {
-      newErrors.longitud = "La longitud debe ser un número válido";
+    if (!formData.long) {
+      newErrors.long = "La longitud es requerida";
+    } else if (isNaN(Number.parseFloat(formData.long))) {
+      newErrors.long = "La longitud debe ser un número válido";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    // Here you would typically make an API call to create the lot
-    console.log("Creating lot:", {
-      ...formData,
-      id_campo: fieldId,
-      superficie_ha: Number.parseFloat(formData.superficie_ha),
-      id_cultivo: Number.parseInt(formData.id_cultivo),
-      id_estadio: Number.parseInt(formData.id_estadio),
-      latitud: Number.parseFloat(formData.latitud),
-      longitud: Number.parseFloat(formData.longitud),
-    });
+    try {
+      setIsCreating(true);
 
-    // Reset form and close modal
-    setFormData({
-      nombre: "",
-      superficie_ha: "",
-      id_cultivo: "",
-      id_estadio: "",
-      latitud: "",
-      longitud: "",
-    });
-    setErrors({});
-    onClose();
+      await createLot({
+        name: formData.name,
+        area: Number.parseFloat(formData.area),
+        lat: Number.parseFloat(formData.lat),
+        long: Number.parseFloat(formData.long),
+        active: formData.active,
+        fieldId: fieldId,
+      });
+
+      toast.success("Lote creado exitosamente");
+
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        area: "",
+        lat: "",
+        long: "",
+        active: true,
+      });
+      setErrors({});
+
+      // Call callback if provided
+      if (onLotCreated) {
+        onLotCreated();
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Error creating lot:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error("Error al crear el lote", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -155,16 +159,16 @@ export function CreateLotModal({
                 </label>
                 <input
                   type="text"
-                  name="nombre"
-                  value={formData.nombre}
+                  name="name"
+                  value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.nombre ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.name ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Ej: Lote A1"
                 />
-                {errors.nombre && (
-                  <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
                 )}
               </div>
 
@@ -174,74 +178,18 @@ export function CreateLotModal({
                 </label>
                 <input
                   type="number"
-                  name="superficie_ha"
-                  value={formData.superficie_ha}
+                  name="area"
+                  value={formData.area}
                   onChange={handleInputChange}
                   step="0.1"
                   min="0"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.superficie_ha ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.area ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="25.5"
                 />
-                {errors.superficie_ha && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.superficie_ha}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cultivo *
-                </label>
-                <select
-                  name="id_cultivo"
-                  value={formData.id_cultivo}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.id_cultivo ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Seleccionar cultivo</option>
-                  {cultivosOptions.map((cultivo) => (
-                    <option key={cultivo.id} value={cultivo.id}>
-                      {cultivo.nombre}
-                    </option>
-                  ))}
-                </select>
-                {errors.id_cultivo && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.id_cultivo}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estadio *
-                </label>
-                <select
-                  name="id_estadio"
-                  value={formData.id_estadio}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.id_estadio ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Seleccionar estadio</option>
-                  {estadiosOptions.map((estadio) => (
-                    <option key={estadio.id} value={estadio.id}>
-                      {estadio.nombre}
-                    </option>
-                  ))}
-                </select>
-                {errors.id_estadio && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.id_estadio}
-                  </p>
+                {errors.area && (
+                  <p className="text-red-500 text-xs mt-1">{errors.area}</p>
                 )}
               </div>
             </div>
@@ -253,17 +201,17 @@ export function CreateLotModal({
                 </label>
                 <input
                   type="number"
-                  name="latitud"
-                  value={formData.latitud}
+                  name="lat"
+                  value={formData.lat}
                   onChange={handleInputChange}
                   step="any"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.latitud ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.lat ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="-34.6037"
                 />
-                {errors.latitud && (
-                  <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>
+                {errors.lat && (
+                  <p className="text-red-500 text-xs mt-1">{errors.lat}</p>
                 )}
               </div>
 
@@ -273,27 +221,53 @@ export function CreateLotModal({
                 </label>
                 <input
                   type="number"
-                  name="longitud"
-                  value={formData.longitud}
+                  name="long"
+                  value={formData.long}
                   onChange={handleInputChange}
                   step="any"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.longitud ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.long ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="-58.3816"
                 />
-                {errors.longitud && (
-                  <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                {errors.long && (
+                  <p className="text-red-500 text-xs mt-1">{errors.long}</p>
                 )}
               </div>
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="active"
+                name="active"
+                checked={formData.active}
+                onChange={handleInputChange}
+                className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-green-500"
+              />
+              <label
+                htmlFor="active"
+                className="text-sm font-medium text-gray-700"
+              >
+                Lote Activo
+              </label>
+            </div>
+
             <div className="flex justify-end space-x-3 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isCreating}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                Crear Lote
+              <Button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={isCreating}
+              >
+                {isCreating ? "Creando..." : "Crear Lote"}
               </Button>
             </div>
           </form>

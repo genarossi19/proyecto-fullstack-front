@@ -22,6 +22,7 @@ import { getLotById, deleteLot } from "../api/services/LotService";
 import type { LotResponse } from "../types/LotType";
 import { toast } from "sonner";
 import { Skeleton } from "../components/ui/skeleton";
+import { EditLotModal } from "../components/EditLotModal";
 
 export function LotDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,8 @@ export function LotDetail() {
   const [lot, setLot] = useState<LotResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const lotId = id ? parseInt(id, 10) : null;
 
@@ -66,7 +69,19 @@ export function LotDetail() {
 
   const handleEdit = () => {
     if (lot) {
-      toast.info("Función de edición pendiente");
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleLotUpdated = async () => {
+    try {
+      const data = await getLotById(lotId!);
+      setLot(data);
+      setIsEditModalOpen(false);
+      toast.success("Lote actualizado correctamente");
+    } catch (error) {
+      console.error("Error reloading lot:", error);
+      toast.error("Error al actualizar el lote");
     }
   };
 
@@ -74,6 +89,7 @@ export function LotDetail() {
     if (!lotId) return;
 
     try {
+      setIsDeleting(true);
       await deleteLot(lotId);
       toast.success("Lote eliminado correctamente");
       navigate(-1);
@@ -84,6 +100,7 @@ export function LotDetail() {
         description: errorMessage,
       });
     } finally {
+      setIsDeleting(false);
       setShowDeleteDialog(false);
     }
   };
@@ -232,16 +249,39 @@ export function LotDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Eliminar
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Lot Modal */}
+      {lot && (
+        <EditLotModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          lot={{
+            id: lot.id,
+            name: lot.name,
+            area: lot.area,
+            lat: lot.lat,
+            long: lot.long,
+            active: true,
+            fieldId: lot.field?.id || 0,
+          }}
+          fieldName={lot.field?.name || "Campo"}
+          clientName={lot.field?.client?.name || "Cliente"}
+          onLotUpdated={handleLotUpdated}
+        />
+      )}
     </div>
   );
 }

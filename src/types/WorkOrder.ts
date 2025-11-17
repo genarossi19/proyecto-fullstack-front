@@ -3,15 +3,15 @@ import type { ClientType } from "./ClientType.ts";
 export interface WorkOrderType {
   id?: number;
   name?: string;
-  created_at: Date;
-  init_date: Date;
-  finish_date: Date;
-  status: string;
-  observation: string;
+  created_at: string;
+  init_date: string | null;
+  finish_date: string | null;
+  status: string | null;
+  observation: string | null;
   clientId: number;
   fieldId: number;
   serviceId: number;
-  price: number;
+  price: number | null;
 }
 
 export interface MachineryDetailType {
@@ -33,8 +33,8 @@ export interface WorkOrderResponse {
   id: number;
   name: string;
   created_at: string;
-  init_date: Date;
-  finish_date: Date;
+  init_date: string;
+  finish_date: string;
   status: string;
   observation: string;
   client: ClientType;
@@ -71,27 +71,31 @@ export interface WorkOrderDetailResponse {
   id: number;
   name: string;
   created_at: string;
-  init_date: Date | null;
-  finish_date: Date | null;
+  init_date: string | null;
+  finish_date: string | null;
   status: string | null;
   observation: string | null;
   price: number | null;
+
   client: {
     id: number;
     name: string;
     email?: string;
   };
+
   field: {
     id: number;
     name: string;
-    area?: number;
-    lat?: number;
-    long?: number;
+    area: number;
+    lat: number;
+    long: number;
   };
+
   service: {
     id: number;
     name: string;
   };
+
   machineryDetails: {
     id: number;
     machinery: {
@@ -104,6 +108,7 @@ export interface WorkOrderDetailResponse {
       status: string;
     };
   }[];
+
   lotDetails: {
     id: number;
     lot: {
@@ -113,5 +118,26 @@ export interface WorkOrderDetailResponse {
       lat: number;
       long: number;
     };
+  }[];
+}
+
+export interface WorkOrderCreateRequest {
+  clientId: number;
+  fieldId: number;
+  serviceId: number;
+
+  init_date: string | null;
+  finish_date: string | null;
+
+  status: string | null;
+  observation: string | null;
+  price: number | null;
+
+  machineryDetails: {
+    machineryId: number;
+  }[];
+
+  lotDetails: {
+    lotId: number;
   }[];
 }

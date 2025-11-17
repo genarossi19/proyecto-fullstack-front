@@ -1,9 +1,9 @@
 import api from "../../lib/axios";
 
 import type {
+  WorkOrderCreateRequest,
   WorkOrderDetailResponse,
   WorkOrderSummaryResponse,
-  WorkOrderType,
 } from "../../types/WorkOrder";
 export const getAllWorkOrders = async (): Promise<
   WorkOrderSummaryResponse[]
@@ -16,20 +16,24 @@ export const getWorkOrder = async (
   id: number
 ): Promise<WorkOrderDetailResponse> => {
   const response = await api.get(`/workorders/${id}`);
-  return response.data;
+  return response.data as WorkOrderDetailResponse;
 };
 
-export const deleteWorkOrder = async (id: number) => {
-  const response = await api.delete(`/workorders/${id}`);
-  return response.data;
+export const deleteWorkOrder = async (id: number): Promise<void> => {
+  await api.delete(`/workorders/${id}`);
 };
 
-export const updateWorkOrder = async (id: number, data: WorkOrderType) => {
+export const updateWorkOrder = async (
+  id: number,
+  data: Partial<WorkOrderCreateRequest>
+): Promise<WorkOrderDetailResponse> => {
   const response = await api.put(`/workorders/${id}`, data);
-  return response.data;
+  return response.data as WorkOrderDetailResponse;
 };
 
-export const createWorkOrder = async (data: Omit<WorkOrderType, "id">) => {
+export const createWorkOrder = async (
+  data: WorkOrderCreateRequest
+): Promise<WorkOrderDetailResponse> => {
   const response = await api.post("/workorders", data);
-  return response.data;
+  return response.data as WorkOrderDetailResponse;
 };

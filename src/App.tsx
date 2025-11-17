@@ -6,7 +6,7 @@ import { Machinery } from "./pages/Machinery";
 import { MachineryDetail } from "./pages/MachineryDetail";
 import { Clients } from "./pages/Clients";
 import { LotDetail } from "./pages/LotDetail";
-import { CreateWorkOrder } from "./pages/CreateWorkOrder";
+import { CreateWorkOrderNew } from "./pages/CreateWorkOrderNew";
 import { WorkOrderDetail } from "./pages/WorkOrderDetail";
 import { Profile } from "./pages/Profile";
 import { EditProfile } from "./pages/EditProfile";
@@ -38,7 +38,7 @@ function App() {
                   />
                   <Route
                     path="/work-orders/new"
-                    element={<CreateWorkOrder />}
+                    element={<CreateWorkOrderNew />}
                   />
                   <Route path="/machinery" element={<Machinery />} />
                   <Route path="/machinery/:id" element={<MachineryDetail />} />

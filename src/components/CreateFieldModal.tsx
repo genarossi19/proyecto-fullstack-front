@@ -4,12 +4,15 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { X } from "lucide-react";
+import { createField } from "../api/services/FieldService";
+import { toast } from "sonner";
 
 interface CreateFieldModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientId: number;
   clientName: string;
+  onFieldCreated?: () => void;
 }
 
 export function CreateFieldModal({
@@ -17,30 +20,31 @@ export function CreateFieldModal({
   onClose,
   clientId,
   clientName,
+  onFieldCreated,
 }: CreateFieldModalProps) {
   const [formData, setFormData] = useState({
-    nombre: "",
-    superficie_ha: "",
-    latitud: "",
-    longitud: "",
-    cultivo_actual: "",
+    name: "",
+    area: "",
+    lat: "",
+    long: "",
+    active: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const cultivosOptions = [
-    { value: "soja", label: "Soja" },
-    { value: "maiz", label: "Maíz" },
-    { value: "trigo", label: "Trigo" },
-    { value: "girasol", label: "Girasol" },
-    { value: "sorgo", label: "Sorgo" },
-  ];
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement;
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -49,62 +53,79 @@ export function CreateFieldModal({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre del campo es requerido";
+    if (!formData.name.trim()) {
+      newErrors.name = "El nombre del campo es requerido";
     }
 
-    if (!formData.superficie_ha) {
-      newErrors.superficie_ha = "La superficie es requerida";
-    } else if (Number.parseFloat(formData.superficie_ha) <= 0) {
-      newErrors.superficie_ha = "La superficie debe ser mayor a 0";
+    if (!formData.area) {
+      newErrors.area = "La superficie es requerida";
+    } else if (Number.parseFloat(formData.area) <= 0) {
+      newErrors.area = "La superficie debe ser mayor a 0";
     }
 
-    if (!formData.latitud) {
-      newErrors.latitud = "La latitud es requerida";
-    } else if (isNaN(Number.parseFloat(formData.latitud))) {
-      newErrors.latitud = "La latitud debe ser un número válido";
+    if (!formData.lat) {
+      newErrors.lat = "La latitud es requerida";
+    } else if (isNaN(Number.parseFloat(formData.lat))) {
+      newErrors.lat = "La latitud debe ser un número válido";
     }
 
-    if (!formData.longitud) {
-      newErrors.longitud = "La longitud es requerida";
-    } else if (isNaN(Number.parseFloat(formData.longitud))) {
-      newErrors.longitud = "La longitud debe ser un número válido";
-    }
-
-    if (!formData.cultivo_actual) {
-      newErrors.cultivo_actual = "El cultivo actual es requerido";
+    if (!formData.long) {
+      newErrors.long = "La longitud es requerida";
+    } else if (isNaN(Number.parseFloat(formData.long))) {
+      newErrors.long = "La longitud debe ser un número válido";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    // Here you would typically make an API call to create the field
-    console.log("Creating field:", {
-      ...formData,
-      id_cliente: clientId,
-      superficie_ha: Number.parseFloat(formData.superficie_ha),
-      latitud: Number.parseFloat(formData.latitud),
-      longitud: Number.parseFloat(formData.longitud),
-    });
+    try {
+      setIsCreating(true);
 
-    // Reset form and close modal
-    setFormData({
-      nombre: "",
-      superficie_ha: "",
-      latitud: "",
-      longitud: "",
-      cultivo_actual: "",
-    });
-    setErrors({});
-    onClose();
+      await createField({
+        name: formData.name,
+        area: Number.parseFloat(formData.area),
+        lat: Number.parseFloat(formData.lat),
+        long: Number.parseFloat(formData.long),
+        active: formData.active,
+        clientId: clientId,
+      });
+
+      toast.success("Campo creado exitosamente");
+
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        area: "",
+        lat: "",
+        long: "",
+        active: true,
+      });
+      setErrors({});
+
+      // Call callback if provided
+      if (onFieldCreated) {
+        onFieldCreated();
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Error creating field:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error("Error al crear el campo", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -135,16 +156,16 @@ export function CreateFieldModal({
                 </label>
                 <input
                   type="text"
-                  name="nombre"
-                  value={formData.nombre}
+                  name="name"
+                  value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.nombre ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.name ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Ej: Campo Norte"
                 />
-                {errors.nombre && (
-                  <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
                 )}
               </div>
 
@@ -154,20 +175,18 @@ export function CreateFieldModal({
                 </label>
                 <input
                   type="number"
-                  name="superficie_ha"
-                  value={formData.superficie_ha}
+                  name="area"
+                  value={formData.area}
                   onChange={handleInputChange}
                   step="0.1"
                   min="0"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.superficie_ha ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.area ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="150.5"
                 />
-                {errors.superficie_ha && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.superficie_ha}
-                  </p>
+                {errors.area && (
+                  <p className="text-red-500 text-xs mt-1">{errors.area}</p>
                 )}
               </div>
             </div>
@@ -179,17 +198,17 @@ export function CreateFieldModal({
                 </label>
                 <input
                   type="number"
-                  name="latitud"
-                  value={formData.latitud}
+                  name="lat"
+                  value={formData.lat}
                   onChange={handleInputChange}
                   step="any"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.latitud ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.lat ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="-34.6037"
                 />
-                {errors.latitud && (
-                  <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>
+                {errors.lat && (
+                  <p className="text-red-500 text-xs mt-1">{errors.lat}</p>
                 )}
               </div>
 
@@ -199,53 +218,53 @@ export function CreateFieldModal({
                 </label>
                 <input
                   type="number"
-                  name="longitud"
-                  value={formData.longitud}
+                  name="long"
+                  value={formData.long}
                   onChange={handleInputChange}
                   step="any"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    errors.longitud ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-gray-400 ${
+                    errors.long ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="-58.3816"
                 />
-                {errors.longitud && (
-                  <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                {errors.long && (
+                  <p className="text-red-500 text-xs mt-1">{errors.long}</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cultivo Actual *
-              </label>
-              <select
-                name="cultivo_actual"
-                value={formData.cultivo_actual}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="active"
+                name="active"
+                checked={formData.active}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                  errors.cultivo_actual ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-green-500"
+              />
+              <label
+                htmlFor="active"
+                className="text-sm font-medium text-gray-700"
               >
-                <option value="">Seleccionar cultivo</option>
-                {cultivosOptions.map((cultivo) => (
-                  <option key={cultivo.value} value={cultivo.label}>
-                    {cultivo.label}
-                  </option>
-                ))}
-              </select>
-              {errors.cultivo_actual && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.cultivo_actual}
-                </p>
-              )}
+                Campo Activo
+              </label>
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isCreating}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                Crear Campo
+              <Button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={isCreating}
+              >
+                {isCreating ? "Creando..." : "Crear Campo"}
               </Button>
             </div>
           </form>

@@ -1,7 +1,11 @@
 import axios from "axios";
 
+// Usa la variable de entorno VITE_API_URL en producción (Vite expone las que empiezan por VITE_)
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string) || "http://localhost:3000";
+
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: `${API_BASE}/api`,
   timeout: 20000,
   withCredentials: true, // Habilita el envío de cookies
 });

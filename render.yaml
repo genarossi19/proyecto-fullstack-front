@@ -1,0 +1,9 @@
+static_sites:
+  - name: frontend-proyecto-fullstack
+    branch: developer
+    root: .
+    buildCommand: npm ci && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: ""
